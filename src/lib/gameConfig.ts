@@ -47,8 +47,8 @@ export const MAX_SHARD_BALANCE = 1000000000000; // 1 trillion
 
 // Exchange rates for The Joke Rune
 export const EXCHANGE_RATES: ExchangeRate = {
-  jokeRuneToTokens: 100000, // 1 Joke Rune = 100k tokens
-  jokeRuneToShards: 10, // 1 Joke Rune = 10 shards
+  jokeRuneToTokens: 10000000000, // 1 Joke Rune = 100k tokens
+  jokeRuneToShards: 1000, // 1 Joke Rune = 10 shards
   jokeRuneForTheJokeRank: 1000, // Need 1000 Joke Runes for The Joke rank
 };
 
@@ -98,7 +98,7 @@ export const RANK_DATA: RankData[] = [
   { key: 'cosmic_arbiter', name: 'Cosmic Arbiter', shardCost: 5000, badge: '🔱', luckMult: 4.0, moneyMult: 6.0, gradient: 'from-indigo-400 to-cyan-600' },
   
   // The Joke rank (special: requires 1000 Joke Runes)
-  { key: 'the_joke', name: 'The Joke', badge: '🃏', luckMult: 10.0, moneyMult: 10.0, gradient: 'from-pink-500 via-purple-500 via-cyan-500 to-yellow-500' },
+  { key: 'the_joke', name: 'The Joke', badge: '🃏', luckMult: 1000.0, moneyMult: 100.0, gradient: 'from-pink-500 via-purple-500 via-cyan-500 to-yellow-500' },
 ];
 
 // Lookup helpers
