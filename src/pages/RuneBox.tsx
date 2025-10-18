@@ -30,7 +30,7 @@ const RUNE_DATA: RuneData[] = [
   { key: 'rune_f', name: 'Fate Rune', symbol: '⭐', effect: '+1 Rank Shard', dropRate: 0.06, cap: null, color: 'from-gold to-yellow-500' },
 ];
 
-const BOX_PRICE = 100;
+const BOX_PRICE = 1000;
 
 const RuneBox = () => {
   const navigate = useNavigate();
@@ -287,7 +287,7 @@ const RuneBox = () => {
                 <Input
                   type="number"
                   min="1"
-                  max="100"
+                  max="10000"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
                   className="cyber-border max-w-[120px]"
