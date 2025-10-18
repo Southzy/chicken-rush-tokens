@@ -66,16 +66,16 @@ const Profile = () => {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-background via-background to-muted">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,204,0.1),transparent_50%)]" />
       
-      <div className="max-w-4xl mx-auto space-y-6 relative z-10">
+      <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 relative z-10">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <Button
             onClick={() => navigate("/")}
             variant="outline"
-            className="cyber-border"
+            className="cyber-border w-full sm:w-auto"
           >
             <Home className="w-4 h-4 mr-2" />
             Dashboard
@@ -83,6 +83,7 @@ const Profile = () => {
           <Button
             onClick={handleLogout}
             variant="destructive"
+            className="w-full sm:w-auto"
           >
             <LogOut className="w-4 h-4 mr-2" />
             Logout
@@ -92,17 +93,17 @@ const Profile = () => {
         {/* Profile Card */}
         <Card className="glass-panel cyber-border">
           <CardHeader>
-            <CardTitle className="text-3xl neon-text-cyan">
+            <CardTitle className="text-2xl sm:text-3xl neon-text-cyan break-words">
               {profile.username}
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex flex-wrap gap-4 items-center">
+          <CardContent className="space-y-4 sm:space-y-6">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-4 items-start sm:items-center">
               <RankBadge rank={profile.rank} />
               <TokenDisplay balance={profile.token_balance} />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="glass-panel p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold neon-text-purple">
                   {stats.totalGames}
@@ -131,8 +132,8 @@ const Profile = () => {
             <CardTitle className="neon-text-purple">Rank Benefits</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between items-center p-3 glass-panel rounded">
+            <div className="space-y-3 text-xs sm:text-sm">
+              <div className="flex justify-between items-center p-3 glass-panel rounded flex-wrap gap-2">
                 <span>Nova Cadet 💫</span>
                 <span className="text-muted-foreground">Default rank</span>
               </div>

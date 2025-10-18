@@ -122,23 +122,23 @@ const LootBox = () => {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-background via-background to-muted">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,215,0,0.1),transparent_50%)]" />
       
-      <div className="max-w-6xl mx-auto space-y-6 relative z-10">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 relative z-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
             <Button
               onClick={() => navigate("/")}
               variant="outline"
-              className="cyber-border"
+              className="cyber-border shrink-0"
             >
               <Home className="w-4 h-4 mr-2" />
               Dashboard
             </Button>
             <div>
-              <h1 className="text-4xl font-bold neon-text-gold flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold neon-text-gold flex items-center gap-2">
                 <Package className="w-8 h-8" />
                 Loot Boxes
               </h1>
@@ -149,7 +149,7 @@ const LootBox = () => {
         </div>
 
         {/* Loot Boxes */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {lootBoxes.map((box) => (
             <Card 
               key={box.id} 
@@ -160,43 +160,43 @@ const LootBox = () => {
               <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent" />
               
               <CardHeader>
-                <CardTitle className="relative z-10 text-2xl neon-text-gold flex items-center gap-2">
-                  <Package className="w-6 h-6" />
+                <CardTitle className="relative z-10 text-xl sm:text-2xl neon-text-gold flex items-center gap-2">
+                  <Package className="w-5 h-5 sm:w-6 sm:h-6" />
                   {box.name}
                 </CardTitle>
               </CardHeader>
               
               <CardContent className="relative z-10 space-y-4">
-                <div className="text-center py-8">
-                  <div className="text-6xl mb-4">📦</div>
-                  <div className="text-sm text-muted-foreground">
+                <div className="text-center py-6 sm:py-8">
+                  <div className="text-5xl sm:text-6xl mb-4">📦</div>
+                  <div className="text-xs sm:text-sm text-muted-foreground">
                     {box.emoji_pool_size} emojis available
                   </div>
-                  <div className="text-sm neon-text-purple mt-2">
+                  <div className="text-xs sm:text-sm neon-text-purple mt-2">
                     {(box.secret_chance * 100).toFixed(0)}% secret chance
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center p-3 glass-panel rounded">
-                  <span className="text-muted-foreground">Price:</span>
-                  <span className="neon-text-gold font-bold text-lg">
+                <div className="flex justify-between items-center p-3 glass-panel rounded flex-wrap gap-2">
+                  <span className="text-sm text-muted-foreground">Price:</span>
+                  <span className="neon-text-gold font-bold text-base sm:text-lg">
                     {box.price.toLocaleString()} tokens
                   </span>
                 </div>
 
                 <Button
-                  className="w-full cyber-border neon-text-gold text-lg py-6"
+                  className="w-full cyber-border neon-text-gold text-base sm:text-lg py-5 sm:py-6"
                   disabled={profile.token_balance < box.price || opening !== null}
                   onClick={() => openBox(box)}
                 >
                   {opening === box.id ? (
                     <>
-                      <Sparkles className="w-5 h-5 mr-2 animate-spin" />
+                      <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 mr-2 animate-spin" />
                       Opening...
                     </>
                   ) : (
                     <>
-                      <Package className="w-5 h-5 mr-2" />
+                      <Package className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
                       Open Now
                     </>
                   )}
@@ -209,30 +209,30 @@ const LootBox = () => {
 
       {/* Reveal Modal */}
       {revealedEmoji && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-          <Card className={`glass-panel cyber-border max-w-md w-full mx-4 ${
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <Card className={`glass-panel cyber-border max-w-md w-full ${
             revealedEmoji.isSecret ? 'border-red-500 shadow-[0_0_30px_rgba(255,0,0,0.5)]' : ''
           }`}>
             <CardHeader>
               <CardTitle className="text-center">
                 {revealedEmoji.isSecret && (
-                  <div className="neon-text-gold text-3xl mb-4 animate-pulse">
+                  <div className="neon-text-gold text-2xl sm:text-3xl mb-4 animate-pulse">
                     ⭐ SECRET! ⭐
                   </div>
                 )}
-                <div className="text-2xl neon-text-cyan">You received:</div>
+                <div className="text-xl sm:text-2xl neon-text-cyan">You received:</div>
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-4 sm:space-y-6">
               <div className="text-center">
-                <div className="text-8xl mb-4 animate-bounce">{revealedEmoji.emoji_symbol}</div>
-                <div className="text-3xl font-bold neon-text-purple mb-2">
+                <div className="text-6xl sm:text-8xl mb-4 animate-bounce">{revealedEmoji.emoji_symbol}</div>
+                <div className="text-2xl sm:text-3xl font-bold neon-text-purple mb-2">
                   {revealedEmoji.name}
                 </div>
-                <div className="text-lg text-muted-foreground capitalize mb-4">
+                <div className="text-base sm:text-lg text-muted-foreground capitalize mb-4">
                   {revealedEmoji.rarity} • {revealedEmoji.effect_type}
                 </div>
-                <div className="text-xl neon-text-gold">
+                <div className="text-lg sm:text-xl neon-text-gold">
                   +{revealedEmoji.bonus_percentage}% Bonus
                 </div>
               </div>

@@ -123,23 +123,23 @@ const Shop = () => {
   const currentRankIndex = getRankIndex(profile.rank);
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-background via-background to-muted">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(138,43,226,0.1),transparent_50%)]" />
       
-      <div className="max-w-6xl mx-auto space-y-6 relative z-10">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 relative z-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
             <Button
               onClick={() => navigate("/")}
               variant="outline"
-              className="cyber-border"
+              className="cyber-border shrink-0"
             >
               <Home className="w-4 h-4 mr-2" />
               Dashboard
             </Button>
             <div>
-              <h1 className="text-4xl font-bold neon-text-purple flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold neon-text-purple flex items-center gap-2">
                 <Sparkles className="w-8 h-8" />
                 Rank Shop
               </h1>
@@ -160,7 +160,7 @@ const Shop = () => {
         </Card>
 
         {/* Available Ranks */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
           {RANK_DATA.map((rankData, index) => {
             const isOwned = getRankIndex(rankData.rank) <= currentRankIndex;
             const canPurchase = profile.token_balance >= rankData.price && !isOwned;
@@ -175,27 +175,27 @@ const Shop = () => {
                 <div className={`absolute inset-0 bg-gradient-to-br ${rankData.color} opacity-10`} />
                 
                 <CardHeader>
-                  <CardTitle className="relative z-10 flex items-center justify-between">
-                    <span className="text-2xl">{rankData.name}</span>
-                    {isOwned && <span className="text-sm neon-text-cyan">OWNED</span>}
+                  <CardTitle className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+                    <span className="text-xl sm:text-2xl">{rankData.name}</span>
+                    {isOwned && <span className="text-xs sm:text-sm neon-text-cyan">OWNED</span>}
                   </CardTitle>
                 </CardHeader>
                 
                 <CardContent className="relative z-10 space-y-4">
                   <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Price:</span>
-                      <span className="neon-text-gold font-bold text-lg">
+                    <div className="flex justify-between items-center flex-wrap gap-2">
+                      <span className="text-sm text-muted-foreground">Price:</span>
+                      <span className="neon-text-gold font-bold text-base sm:text-lg">
                         {rankData.price.toLocaleString()} tokens
                       </span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Effect:</span>
-                      <span>{rankData.effect}</span>
+                    <div className="flex justify-between items-center flex-wrap gap-2">
+                      <span className="text-sm text-muted-foreground">Effect:</span>
+                      <span className="text-sm">{rankData.effect}</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Bonus:</span>
-                      <span className="neon-text-purple font-bold">{rankData.bonus}</span>
+                    <div className="flex justify-between items-center flex-wrap gap-2">
+                      <span className="text-sm text-muted-foreground">Bonus:</span>
+                      <span className="neon-text-purple font-bold text-sm">{rankData.bonus}</span>
                     </div>
                   </div>
 

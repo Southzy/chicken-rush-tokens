@@ -132,24 +132,24 @@ const Game = () => {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-background via-background to-muted">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,204,0.1),transparent_50%)]" />
       
-      <div className="max-w-6xl mx-auto space-y-6 relative z-10">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6 relative z-10">
         {/* Header */}
-        <div className="flex flex-wrap gap-4 justify-between items-center">
+        <div className="flex flex-col lg:flex-row gap-4 justify-between items-center">
           <Button
             onClick={() => navigate("/")}
             variant="outline"
-            className="cyber-border"
+            className="cyber-border w-full lg:w-auto"
           >
             <Home className="w-4 h-4 mr-2" />
             Dashboard
           </Button>
-          <h1 className="text-4xl font-bold neon-text-cyan animate-glow-pulse">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold neon-text-cyan animate-glow-pulse text-center">
             🐔 Chicken Road
           </h1>
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-col sm:flex-row gap-4 items-center w-full lg:w-auto">
             <TokenDisplay balance={profile.token_balance} />
             <RankBadge rank={profile.rank} />
             <Button

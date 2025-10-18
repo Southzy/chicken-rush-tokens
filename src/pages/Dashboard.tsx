@@ -57,14 +57,14 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen p-6 bg-gradient-to-br from-background via-background to-muted">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,204,0.1),transparent_50%)]" />
       
-      <div className="max-w-7xl mx-auto space-y-6 relative z-10">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 relative z-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div>
-            <h1 className="text-4xl font-bold neon-text-cyan mb-2">Dashboard</h1>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold neon-text-cyan mb-2">Dashboard</h1>
             <p className="text-muted-foreground">Welcome back, {profile.username}!</p>
           </div>
           <TokenDisplay balance={profile.token_balance} />

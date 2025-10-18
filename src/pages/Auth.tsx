@@ -60,12 +60,12 @@ const Auth = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-background via-background to-muted">
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,255,204,0.1),transparent_50%)]" />
       
       <Card className="w-full max-w-md glass-panel cyber-border z-10">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold text-center neon-text-cyan">
+        <CardHeader className="space-y-1 px-4 sm:px-6">
+          <CardTitle className="text-2xl sm:text-3xl font-bold text-center neon-text-cyan">
             🐔 Chicken Road
           </CardTitle>
           <CardDescription className="text-center text-muted-foreground">
