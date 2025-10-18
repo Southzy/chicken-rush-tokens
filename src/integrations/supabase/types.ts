@@ -77,6 +77,13 @@ export type Database = {
             foreignKeyName: "game_history_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_history_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -114,6 +121,7 @@ export type Database = {
           created_at: string
           id: string
           rank: Database["public"]["Enums"]["user_rank"]
+          rank_shards: number
           token_balance: number
           updated_at: string
           username: string
@@ -122,6 +130,7 @@ export type Database = {
           created_at?: string
           id: string
           rank?: Database["public"]["Enums"]["user_rank"]
+          rank_shards?: number
           token_balance?: number
           updated_at?: string
           username: string
@@ -130,6 +139,7 @@ export type Database = {
           created_at?: string
           id?: string
           rank?: Database["public"]["Enums"]["user_rank"]
+          rank_shards?: number
           token_balance?: number
           updated_at?: string
           username?: string
@@ -168,6 +178,45 @@ export type Database = {
           },
         ]
       }
+      user_inventory: {
+        Row: {
+          created_at: string
+          id: string
+          rune_a: number
+          rune_b: number
+          rune_c: number
+          rune_d: number
+          rune_e: number
+          rune_f: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          rune_a?: number
+          rune_b?: number
+          rune_c?: number
+          rune_d?: number
+          rune_e?: number
+          rune_f?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          rune_a?: number
+          rune_b?: number
+          rune_c?: number
+          rune_d?: number
+          rune_e?: number
+          rune_f?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -192,6 +241,13 @@ export type Database = {
             foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "leaderboard_stats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -199,7 +255,26 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      leaderboard_stats: {
+        Row: {
+          id: string | null
+          luck_score: number | null
+          money_score: number | null
+          power_score: number | null
+          rank: Database["public"]["Enums"]["user_rank"] | null
+          rune_a: number | null
+          rune_b: number | null
+          rune_c: number | null
+          rune_d: number | null
+          rune_e: number | null
+          rune_f: number | null
+          rune_luck: number | null
+          rune_money: number | null
+          token_balance: number | null
+          username: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
@@ -218,6 +293,12 @@ export type Database = {
         | "cyber_warden"
         | "celestial_overlord"
         | "eclipse_titan"
+        | "starlight_scout"
+        | "nebula_ranger"
+        | "quasar_sentinel"
+        | "pulsar_warden"
+        | "eventide_herald"
+        | "cosmic_arbiter"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -352,6 +433,12 @@ export const Constants = {
         "cyber_warden",
         "celestial_overlord",
         "eclipse_titan",
+        "starlight_scout",
+        "nebula_ranger",
+        "quasar_sentinel",
+        "pulsar_warden",
+        "eventide_herald",
+        "cosmic_arbiter",
       ],
     },
   },
