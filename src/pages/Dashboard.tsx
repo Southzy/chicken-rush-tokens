@@ -12,9 +12,18 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [stats, setStats] = useState({ totalGames: 0, totalWinnings: 0 });
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
   useEffect(() => {
     checkAuth();
+    fetchLeaderboard();
+
+    // Refresh leaderboard every 5 minutes
+    const interval = setInterval(() => {
+      fetchLeaderboard();
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const checkAuth = async () => {
@@ -46,6 +55,16 @@ const Dashboard = () => {
         totalWinnings: data.reduce((sum, game) => sum + game.profit, 0),
       });
     }
+  };
+
+  const fetchLeaderboard = async () => {
+    const { data } = await supabase
+      .from("profiles")
+      .select("username, token_balance, rank")
+      .order("token_balance", { ascending: false })
+      .limit(10);
+
+    if (data) setLeaderboard(data);
   };
 
   if (!profile) {
@@ -171,19 +190,59 @@ const Dashboard = () => {
           </Card>
         </div>
 
-        {/* Recent Games */}
+        {/* Leaderboard */}
         <Card className="glass-panel cyber-border">
           <CardHeader>
-            <CardTitle className="neon-text-cyan">Recent Games</CardTitle>
+            <CardTitle className="neon-text-cyan">Leaderboard</CardTitle>
+            <p className="text-xs sm:text-sm text-muted-foreground">Updates every 5 minutes</p>
           </CardHeader>
           <CardContent>
-            {stats.totalGames === 0 ? (
+            {leaderboard.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                No games played yet. Start playing to see your history!
+                Loading leaderboard...
               </div>
             ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Game history will appear here
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Rank</th>
+                      <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Player</th>
+                      <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Level</th>
+                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm">Tokens</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((player, index) => (
+                      <tr 
+                        key={player.username} 
+                        className={`border-b border-border/50 ${
+                          player.username === profile?.username ? 'bg-primary/10' : ''
+                        }`}
+                      >
+                        <td className="p-2 sm:p-3">
+                          <span className={`text-xs sm:text-sm font-bold ${
+                            index === 0 ? 'neon-text-gold' :
+                            index === 1 ? 'text-gray-400' :
+                            index === 2 ? 'text-amber-600' :
+                            'text-muted-foreground'
+                          }`}>
+                            #{index + 1}
+                          </span>
+                        </td>
+                        <td className="p-2 sm:p-3 text-xs sm:text-sm truncate max-w-[100px] sm:max-w-none">
+                          {player.username}
+                        </td>
+                        <td className="p-2 sm:p-3">
+                          <RankBadge rank={player.rank} />
+                        </td>
+                        <td className="text-right p-2 sm:p-3 text-xs sm:text-sm font-bold neon-text-cyan">
+                          {player.token_balance.toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </CardContent>
