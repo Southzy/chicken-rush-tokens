@@ -9,7 +9,7 @@ import { RankBadge } from "@/components/RankBadge";
 import { User, Play, DollarSign, Home } from "lucide-react";
 import { toast } from "sonner";
 
-const MULTIPLIERS = [1.12, 1.17, 1.23, 1.31, 1.42, 1.56, 1.74, 2.0, 2.35, 2.88];
+const MULTIPLIERS = [1.0, 1.17, 1.23, 1.31, 1.42, 1.56, 1.74, 2.0, 2.35, 2.88];
 
 const Game = () => {
   const navigate = useNavigate();
