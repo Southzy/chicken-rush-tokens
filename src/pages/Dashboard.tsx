@@ -8,6 +8,7 @@ import { TokenDisplay } from "@/components/TokenDisplay";
 import { User, ShoppingBag, Package, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatTokenBalance } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -103,9 +104,18 @@ const Dashboard = () => {
 
           <Card className="glass-panel cyber-border">
             <CardContent className="p-6">
-              <div className="text-2xl font-bold neon-text-gold mb-2">
-                {formatTokenBalance(stats.totalWinnings)}
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="text-2xl font-bold neon-text-gold mb-2 cursor-help">
+                      {formatTokenBalance(stats.totalWinnings)}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="font-mono">{stats.totalWinnings.toLocaleString()} tokens</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <div className="text-sm text-muted-foreground">Total Winnings</div>
             </CardContent>
           </Card>
@@ -238,7 +248,18 @@ const Dashboard = () => {
                           <RankBadge rank={player.rank} />
                         </td>
                         <td className="text-right p-2 sm:p-3 text-xs sm:text-sm font-bold neon-text-cyan">
-                          {formatTokenBalance(player.token_balance)}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="cursor-help">
+                                  {formatTokenBalance(player.token_balance)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-mono">{player.token_balance.toLocaleString()} tokens</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                         </td>
                       </tr>
                     ))}

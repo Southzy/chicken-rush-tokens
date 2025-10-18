@@ -8,6 +8,7 @@ import { TokenDisplay } from "@/components/TokenDisplay";
 import { LogOut, Home } from "lucide-react";
 import { toast } from "sonner";
 import { formatTokenBalance } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -112,9 +113,18 @@ const Profile = () => {
                 <div className="text-sm text-muted-foreground">Total Games</div>
               </div>
               <div className="glass-panel p-4 rounded-lg text-center">
-                <div className="text-2xl font-bold neon-text-gold">
-                  {formatTokenBalance(stats.totalWinnings)}
-                </div>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="text-2xl font-bold neon-text-gold cursor-help">
+                        {formatTokenBalance(stats.totalWinnings)}
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p className="font-mono">{stats.totalWinnings.toLocaleString()} tokens</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 <div className="text-sm text-muted-foreground">Total Winnings</div>
               </div>
               <div className="glass-panel p-4 rounded-lg text-center">
