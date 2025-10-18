@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Game from "./pages/Game";
 import Shop from "./pages/Shop";
 import LootBox from "./pages/LootBox";
+import RuneBox from "./pages/RuneBox";
 import Auth from "./pages/Auth";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/game" element={<Game />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/lootbox" element={<LootBox />} />
+          <Route path="/runebox" element={<RuneBox />} />
           <Route path="/auth" element={<Auth />} />
           <Route path="/profile" element={<Profile />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

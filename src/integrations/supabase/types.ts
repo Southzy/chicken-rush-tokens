@@ -262,6 +262,7 @@ export type Database = {
           money_score: number | null
           power_score: number | null
           rank: Database["public"]["Enums"]["user_rank"] | null
+          rank_shards: number | null
           rune_a: number | null
           rune_b: number | null
           rune_c: number | null

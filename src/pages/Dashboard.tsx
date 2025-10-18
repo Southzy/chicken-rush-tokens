@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RankBadge } from "@/components/RankBadge";
 import { TokenDisplay } from "@/components/TokenDisplay";
-import { User, ShoppingBag, Package, Gamepad2 } from "lucide-react";
+import { User, ShoppingBag, Package, Gamepad2, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { formatTokenBalance } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -131,7 +131,7 @@ const Dashboard = () => {
         </div>
 
         {/* Navigation Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card 
             className="glass-panel cyber-border hover:scale-105 transition-transform cursor-pointer"
             onClick={() => navigate("/game")}
@@ -179,6 +179,23 @@ const Dashboard = () => {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Open boxes and collect powerful emojis!
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="glass-panel cyber-border hover:scale-105 transition-transform cursor-pointer"
+            onClick={() => navigate("/runebox")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 neon-text-purple">
+                <Zap className="w-6 h-6" />
+                Rune Box
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Collect runes to enhance your stats!
               </p>
             </CardContent>
           </Card>

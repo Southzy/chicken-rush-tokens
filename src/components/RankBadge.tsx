@@ -24,6 +24,30 @@ const rankConfig = {
     label: "Eclipse Titan 🌑",
     gradient: "from-[#1a0033] to-[#9900ff]",
   },
+  starlight_scout: {
+    label: "Starlight Scout 🌟",
+    gradient: "from-[#e0e7ff] to-[#c7d2fe]",
+  },
+  nebula_ranger: {
+    label: "Nebula Ranger 🌌",
+    gradient: "from-[#a78bfa] to-[#7c3aed]",
+  },
+  quasar_sentinel: {
+    label: "Quasar Sentinel 💫",
+    gradient: "from-[#fbbf24] to-[#f59e0b]",
+  },
+  pulsar_warden: {
+    label: "Pulsar Warden ✨",
+    gradient: "from-[#06b6d4] to-[#0891b2]",
+  },
+  eventide_herald: {
+    label: "Eventide Herald 🌠",
+    gradient: "from-[#ec4899] to-[#be185d]",
+  },
+  cosmic_arbiter: {
+    label: "Cosmic Arbiter 🌌",
+    gradient: "from-[#8b5cf6] to-[#6366f1]",
+  },
 };
 
 export const RankBadge = ({ rank, className = "" }: RankBadgeProps) => {
