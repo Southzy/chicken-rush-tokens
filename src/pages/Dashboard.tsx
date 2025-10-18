@@ -62,8 +62,8 @@ const Dashboard = () => {
   const fetchLeaderboard = async () => {
     const { data } = await supabase
       .from("profiles")
-      .select("username, token_balance, rank")
-      .order("token_balance", { ascending: false })
+      .select("username, token_balance, rank, rank_shards")
+      .order("rank_shards", { ascending: false })
       .limit(10);
 
     if (data) setLeaderboard(data);
@@ -237,6 +237,7 @@ const Dashboard = () => {
                       <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Rank</th>
                       <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Player</th>
                       <th className="text-left p-2 sm:p-3 text-xs sm:text-sm">Level</th>
+                      <th className="text-right p-2 sm:p-3 text-xs sm:text-sm">Shards</th>
                       <th className="text-right p-2 sm:p-3 text-xs sm:text-sm">Tokens</th>
                     </tr>
                   </thead>
@@ -263,6 +264,9 @@ const Dashboard = () => {
                         </td>
                         <td className="p-2 sm:p-3">
                           <RankBadge rank={player.rank} />
+                        </td>
+                        <td className="text-right p-2 sm:p-3 text-xs sm:text-sm font-bold neon-text-purple">
+                          {player.rank_shards?.toLocaleString() || 0}
                         </td>
                         <td className="text-right p-2 sm:p-3 text-xs sm:text-sm font-bold neon-text-cyan">
                           <TooltipProvider>
