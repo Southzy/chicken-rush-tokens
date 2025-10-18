@@ -8,7 +8,12 @@ import { Home, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { formatTokenBalance } from "@/lib/utils";
-import { RUNE_DATA, BOX_PRICE, RuneData, RuneKey } from "@/lib/gameConfig";
+import { RUNE_DATA, BOX_PRICE, RuneData } from "@/lib/gameConfig";
+// ⬇️ เพิ่มสวิตช์
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+
+const STORAGE_KEY = "runeBox.showResults";
 
 const RuneBox = () => {
   const navigate = useNavigate();
@@ -17,10 +22,22 @@ const RuneBox = () => {
   const [quantity, setQuantity] = useState(1);
   const [opening, setOpening] = useState(false);
   const [revealedRunes, setRevealedRunes] = useState<any[]>([]);
+  // ⬇️ toggle แสดง/ซ่อนผลลัพธ์
+  const [showResults, setShowResults] = useState<boolean>(true);
 
   useEffect(() => {
+    // โหลดค่าที่เคยเลือกไว้
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved !== null) {
+      setShowResults(saved === "true");
+    }
     fetchData();
   }, []);
+
+  useEffect(() => {
+    // บันทึกค่าทุกครั้งที่เปลี่ยน
+    localStorage.setItem(STORAGE_KEY, String(showResults));
+  }, [showResults]);
 
   const fetchData = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -46,7 +63,6 @@ const RuneBox = () => {
     if (inventoryData) {
       setInventory(inventoryData);
     } else {
-      // Create inventory if doesn't exist
       const { data: newInventory } = await supabase
         .from("user_inventory")
         .insert({ user_id: user.id })
@@ -58,7 +74,6 @@ const RuneBox = () => {
 
   const applyDiminishingReturns = (currentCount: number, cap: number | null, gains: number): number => {
     if (!cap) return gains;
-    
     const nearCapThreshold = cap * 0.9;
     if (currentCount >= cap) return 0;
     if (currentCount >= nearCapThreshold) {
@@ -70,7 +85,7 @@ const RuneBox = () => {
   const rollRune = (currentInventory: any): { rune: RuneData; actualGain: number } => {
     const roll = Math.random();
     let cumulativeRate = 0;
-    
+
     for (const rune of RUNE_DATA) {
       cumulativeRate += rune.dropRate;
       if (roll <= cumulativeRate) {
@@ -79,7 +94,6 @@ const RuneBox = () => {
         return { rune, actualGain };
       }
     }
-    
     return { rune: RUNE_DATA[0], actualGain: 1 };
   };
 
@@ -94,22 +108,26 @@ const RuneBox = () => {
 
     setOpening(true);
 
-    // Use bulk open edge function for large quantities
+    // ใช้ bulk เมื่อจำนวนมาก
     if (quantity >= 100) {
       try {
         const { data, error } = await supabase.functions.invoke('bulk-open-runebox', {
           body: { quantity },
         });
-
         if (error) throw error;
 
-        setRevealedRunes(data.results.map((r: any) => ({
-          rune: RUNE_DATA.find(rd => rd.key === r.runeKey)!,
-          actualGain: r.actualGain,
-          wasCapHit: r.wasCapHit,
-        })));
-        
-        toast.success(`Opened ${quantity} boxes! Check your results.`);
+        // ⬇️ ตั้งค่าเฉพาะเมื่อเปิดแสดงผล
+        if (showResults) {
+          setRevealedRunes(
+            data.results.map((r: any) => ({
+              rune: RUNE_DATA.find(rd => rd.key === r.runeKey)!,
+              actualGain: r.actualGain,
+              wasCapHit: r.wasCapHit,
+            }))
+          );
+        }
+
+        toast.success(`Opened ${quantity} boxes!${showResults ? " Check your results." : ""}`);
         setOpening(false);
         fetchData();
         return;
@@ -120,7 +138,7 @@ const RuneBox = () => {
       }
     }
 
-    // Deduct tokens
+    // หัก token
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ token_balance: profile.token_balance - totalPrice })
@@ -132,14 +150,14 @@ const RuneBox = () => {
       return;
     }
 
-    // Roll runes
+    // สุ่มผล
     const results: any[] = [];
     const newInventory = { ...inventory };
     let totalShards = 0;
 
     for (let i = 0; i < quantity; i++) {
       const { rune, actualGain } = rollRune(newInventory);
-      
+
       if (rune.key === 'rune_f') {
         totalShards += actualGain;
       } else if (rune.key === 'rune_joke') {
@@ -147,11 +165,11 @@ const RuneBox = () => {
       } else {
         newInventory[rune.key] = (newInventory[rune.key] || 0) + actualGain;
       }
-      
+
       results.push({ rune, actualGain, wasCapHit: actualGain === 0 });
     }
 
-    // Update inventory
+    // อัปเดต inventory
     const inventoryUpdate: any = {};
     RUNE_DATA.forEach(rune => {
       inventoryUpdate[rune.key] = newInventory[rune.key] || 0;
@@ -166,7 +184,7 @@ const RuneBox = () => {
       console.error("Failed to update inventory:", invError);
     }
 
-    // Update rank shards if any Fate Runes
+    // อัปเดต shards
     if (totalShards > 0) {
       const { error: shardError } = await supabase
         .from("profiles")
@@ -179,7 +197,10 @@ const RuneBox = () => {
     }
 
     setTimeout(() => {
-      setRevealedRunes(results);
+      // ⬇️ ตั้งค่าผลลัพธ์เฉพาะเมื่อเปิดแสดงผล
+      if (showResults) {
+        setRevealedRunes(results);
+      }
       setOpening(false);
       fetchData();
       toast.success(`Opened ${quantity} Rune Box${quantity > 1 ? 'es' : ''}!`);
@@ -194,7 +215,7 @@ const RuneBox = () => {
     if (!cap || !inventory) return null;
     const current = inventory[runeKey] || 0;
     const percentage = (current / cap) * 100;
-    
+
     if (percentage >= 100) return { color: 'text-red-500', text: 'CAPPED' };
     if (percentage >= 90) return { color: 'text-yellow-500', text: `${percentage.toFixed(0)}% (Diminished)` };
     return { color: 'text-green-500', text: `${percentage.toFixed(0)}%` };
@@ -213,7 +234,7 @@ const RuneBox = () => {
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(138,43,226,0.1),transparent_50%)]" />
-      
+
       <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 relative z-10">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -247,7 +268,7 @@ const RuneBox = () => {
               {RUNE_DATA.map((rune) => {
                 const count = inventory[rune.key] || 0;
                 const capStatus = getCapStatus(rune.key, rune.cap);
-                
+
                 return (
                   <div key={rune.key} className={`glass-panel p-3 rounded-lg border bg-gradient-to-br ${rune.color} bg-opacity-10`}>
                     <div className="text-3xl text-center mb-1">{rune.symbol}</div>
@@ -302,6 +323,14 @@ const RuneBox = () => {
                 <span className="text-sm text-muted-foreground">Total: <span className="neon-text-gold font-bold">{formatTokenBalance(totalCost)} tokens</span></span>
               </div>
 
+              {/* ⬇️ Toggle แสดง/ซ่อนผลลัพธ์ */}
+              <div className="flex items-center gap-3">
+                <Switch id="show-results" checked={showResults} onCheckedChange={setShowResults} />
+                <Label htmlFor="show-results" className="cursor-pointer">
+                  Show results modal
+                </Label>
+              </div>
+
               <Button
                 className="w-full cyber-border py-6 text-lg"
                 disabled={profile.token_balance < totalCost || opening}
@@ -344,8 +373,8 @@ const RuneBox = () => {
         </Card>
       </div>
 
-      {/* Reveal Modal */}
-      {revealedRunes.length > 0 && (
+      {/* Reveal Modal: แสดงเฉพาะเมื่อเปิด toggle */}
+      {showResults && revealedRunes.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <Card className="glass-panel cyber-border max-w-2xl w-full max-h-[80vh] overflow-y-auto">
             <CardHeader>
@@ -355,8 +384,8 @@ const RuneBox = () => {
             </CardHeader>
             <CardContent className="space-y-3">
               {revealedRunes.map((result, idx) => (
-                <div 
-                  key={idx} 
+                <div
+                  key={idx}
                   className={`flex items-center justify-between p-4 glass-panel rounded-lg border bg-gradient-to-r ${result.rune.color} bg-opacity-20`}
                 >
                   <div className="flex items-center gap-3">
@@ -377,7 +406,7 @@ const RuneBox = () => {
                   </div>
                 </div>
               ))}
-              <Button 
+              <Button
                 className="w-full cyber-border mt-4"
                 onClick={closeReveal}
               >
