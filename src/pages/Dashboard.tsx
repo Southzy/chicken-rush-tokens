@@ -7,6 +7,7 @@ import { RankBadge } from "@/components/RankBadge";
 import { TokenDisplay } from "@/components/TokenDisplay";
 import { User, ShoppingBag, Package, Gamepad2 } from "lucide-react";
 import { toast } from "sonner";
+import { formatTokenBalance } from "@/lib/utils";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -103,7 +104,7 @@ const Dashboard = () => {
           <Card className="glass-panel cyber-border">
             <CardContent className="p-6">
               <div className="text-2xl font-bold neon-text-gold mb-2">
-                {stats.totalWinnings.toLocaleString()}
+                {formatTokenBalance(stats.totalWinnings)}
               </div>
               <div className="text-sm text-muted-foreground">Total Winnings</div>
             </CardContent>
@@ -237,7 +238,7 @@ const Dashboard = () => {
                           <RankBadge rank={player.rank} />
                         </td>
                         <td className="text-right p-2 sm:p-3 text-xs sm:text-sm font-bold neon-text-cyan">
-                          {player.token_balance.toLocaleString()}
+                          {formatTokenBalance(player.token_balance)}
                         </td>
                       </tr>
                     ))}

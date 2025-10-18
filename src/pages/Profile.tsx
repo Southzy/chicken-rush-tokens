@@ -7,6 +7,7 @@ import { RankBadge } from "@/components/RankBadge";
 import { TokenDisplay } from "@/components/TokenDisplay";
 import { LogOut, Home } from "lucide-react";
 import { toast } from "sonner";
+import { formatTokenBalance } from "@/lib/utils";
 
 const Profile = () => {
   const navigate = useNavigate();
@@ -112,7 +113,7 @@ const Profile = () => {
               </div>
               <div className="glass-panel p-4 rounded-lg text-center">
                 <div className="text-2xl font-bold neon-text-gold">
-                  {stats.totalWinnings.toLocaleString()}
+                  {formatTokenBalance(stats.totalWinnings)}
                 </div>
                 <div className="text-sm text-muted-foreground">Total Winnings</div>
               </div>
