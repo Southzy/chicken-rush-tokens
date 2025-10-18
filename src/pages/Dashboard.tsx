@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RankBadge } from "@/components/RankBadge";
 import { TokenDisplay } from "@/components/TokenDisplay";
-import { User, ShoppingBag, Package, Gamepad2, Zap } from "lucide-react";
+import { User, ShoppingBag, Package, Gamepad2, Zap, ArrowRightLeft, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { formatTokenBalance } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -196,6 +196,23 @@ const Dashboard = () => {
             <CardContent>
               <p className="text-sm text-muted-foreground">
                 Collect runes to enhance your stats!
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card 
+            className="glass-panel cyber-border hover:scale-105 transition-transform cursor-pointer"
+            onClick={() => navigate("/exchange")}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 neon-text-gold">
+                <ArrowRightLeft className="w-6 h-6" />
+                Exchange
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Exchange Joke Runes for rewards!
               </p>
             </CardContent>
           </Card>

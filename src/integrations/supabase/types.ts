@@ -188,6 +188,14 @@ export type Database = {
           rune_d: number
           rune_e: number
           rune_f: number
+          rune_g: number
+          rune_h: number
+          rune_i: number
+          rune_j: number
+          rune_joke: number
+          rune_k: number
+          rune_l: number
+          rune_m: number
           updated_at: string
           user_id: string
         }
@@ -200,6 +208,14 @@ export type Database = {
           rune_d?: number
           rune_e?: number
           rune_f?: number
+          rune_g?: number
+          rune_h?: number
+          rune_i?: number
+          rune_j?: number
+          rune_joke?: number
+          rune_k?: number
+          rune_l?: number
+          rune_m?: number
           updated_at?: string
           user_id: string
         }
@@ -212,6 +228,14 @@ export type Database = {
           rune_d?: number
           rune_e?: number
           rune_f?: number
+          rune_g?: number
+          rune_h?: number
+          rune_i?: number
+          rune_j?: number
+          rune_joke?: number
+          rune_k?: number
+          rune_l?: number
+          rune_m?: number
           updated_at?: string
           user_id?: string
         }
@@ -269,7 +293,15 @@ export type Database = {
           rune_d: number | null
           rune_e: number | null
           rune_f: number | null
+          rune_g: number | null
+          rune_h: number | null
+          rune_i: number | null
+          rune_j: number | null
+          rune_joke: number | null
+          rune_k: number | null
+          rune_l: number | null
           rune_luck: number | null
+          rune_m: number | null
           rune_money: number | null
           token_balance: number | null
           username: string | null
@@ -300,6 +332,7 @@ export type Database = {
         | "pulsar_warden"
         | "eventide_herald"
         | "cosmic_arbiter"
+        | "the_joke"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -440,6 +473,7 @@ export const Constants = {
         "pulsar_warden",
         "eventide_herald",
         "cosmic_arbiter",
+        "the_joke",
       ],
     },
   },

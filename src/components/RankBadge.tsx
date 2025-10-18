@@ -48,6 +48,10 @@ const rankConfig = {
     label: "Cosmic Arbiter 🌌",
     gradient: "from-[#8b5cf6] to-[#6366f1]",
   },
+  the_joke: {
+    label: "The Joke 🃏",
+    gradient: "from-[#ec4899] via-[#a855f7] via-[#06b6d4] to-[#eab308]",
+  },
 };
 
 export const RankBadge = ({ rank, className = "" }: RankBadgeProps) => {

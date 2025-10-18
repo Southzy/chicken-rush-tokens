@@ -8,29 +8,7 @@ import { Home, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { formatTokenBalance } from "@/lib/utils";
-
-type RuneType = 'rune_a' | 'rune_b' | 'rune_c' | 'rune_d' | 'rune_e' | 'rune_f';
-
-interface RuneData {
-  key: string;
-  name: string;
-  symbol: string;
-  effect: string;
-  dropRate: number;
-  cap: number | null;
-  color: string;
-}
-
-const RUNE_DATA: RuneData[] = [
-  { key: 'rune_a', name: 'Aether Rune', symbol: '✨', effect: '+0.001 Luck', dropRate: 0.30, cap: 500, color: 'from-cyan-500 to-blue-500' },
-  { key: 'rune_b', name: 'Blaze Rune', symbol: '🔥', effect: '+0.004 Money Multiplier', dropRate: 0.22, cap: 300, color: 'from-orange-500 to-red-500' },
-  { key: 'rune_c', name: 'Chrono Rune', symbol: '⏰', effect: '+0.0005 Luck & +0.001 Money', dropRate: 0.018, cap: 400, color: 'from-purple-500 to-pink-500' },
-  { key: 'rune_d', name: 'Dusk Rune', symbol: '🌙', effect: '+0.25% Emoji Luck bonus', dropRate: 0.012, cap: 200, color: 'from-indigo-500 to-purple-500' },
-  { key: 'rune_e', name: 'Ember Rune', symbol: '💎', effect: '+0.25% Emoji Money bonus', dropRate: 0.012, cap: 2000, color: 'from-yellow-500 to-orange-500' },
-  { key: 'rune_f', name: 'Fate Rune', symbol: '⭐', effect: '+1 Rank Shard', dropRate: 0.006, cap: , color: 'from-gold to-yellow-500' },
-];
-
-const BOX_PRICE = 1000;
+import { RUNE_DATA, BOX_PRICE, RuneData, RuneKey } from "@/lib/gameConfig";
 
 const RuneBox = () => {
   const navigate = useNavigate();
@@ -116,6 +94,32 @@ const RuneBox = () => {
 
     setOpening(true);
 
+    // Use bulk open edge function for large quantities
+    if (quantity >= 100) {
+      try {
+        const { data, error } = await supabase.functions.invoke('bulk-open-runebox', {
+          body: { quantity },
+        });
+
+        if (error) throw error;
+
+        setRevealedRunes(data.results.map((r: any) => ({
+          rune: RUNE_DATA.find(rd => rd.key === r.runeKey)!,
+          actualGain: r.actualGain,
+          wasCapHit: r.wasCapHit,
+        })));
+        
+        toast.success(`Opened ${quantity} boxes! Check your results.`);
+        setOpening(false);
+        fetchData();
+        return;
+      } catch (error: any) {
+        toast.error(error.message || "Failed to open boxes");
+        setOpening(false);
+        return;
+      }
+    }
+
     // Deduct tokens
     const { error: updateError } = await supabase
       .from("profiles")
@@ -138,6 +142,8 @@ const RuneBox = () => {
       
       if (rune.key === 'rune_f') {
         totalShards += actualGain;
+      } else if (rune.key === 'rune_joke') {
+        newInventory.rune_joke = (newInventory.rune_joke || 0) + actualGain;
       } else {
         newInventory[rune.key] = (newInventory[rune.key] || 0) + actualGain;
       }
@@ -148,9 +154,7 @@ const RuneBox = () => {
     // Update inventory
     const inventoryUpdate: any = {};
     RUNE_DATA.forEach(rune => {
-      if (rune.key !== 'rune_f') {
-        inventoryUpdate[rune.key] = newInventory[rune.key];
-      }
+      inventoryUpdate[rune.key] = newInventory[rune.key] || 0;
     });
 
     const { error: invError } = await supabase
@@ -289,9 +293,12 @@ const RuneBox = () => {
                   min="1"
                   max="10000"
                   value={quantity}
-                  onChange={(e) => setQuantity(Math.max(1, Math.min(100, parseInt(e.target.value) || 1)))}
+                  onChange={(e) => setQuantity(Math.max(1, Math.min(10000, parseInt(e.target.value) || 1)))}
                   className="cyber-border max-w-[120px]"
                 />
+                {quantity >= 100 && (
+                  <span className="text-xs text-muted-foreground">Uses bulk server processing</span>
+                )}
                 <span className="text-sm text-muted-foreground">Total: <span className="neon-text-gold font-bold">{formatTokenBalance(totalCost)} tokens</span></span>
               </div>
 
