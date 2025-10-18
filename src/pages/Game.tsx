@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TokenDisplay } from "@/components/TokenDisplay";
 import { RankBadge } from "@/components/RankBadge";
-import { User, Play, DollarSign } from "lucide-react";
+import { User, Play, DollarSign, Home } from "lucide-react";
 import { toast } from "sonner";
 
 const MULTIPLIERS = [1.12, 1.17, 1.23, 1.31, 1.42, 1.56, 1.74, 2.0, 2.35, 2.88];
@@ -138,6 +138,14 @@ const Game = () => {
       <div className="max-w-6xl mx-auto space-y-6 relative z-10">
         {/* Header */}
         <div className="flex flex-wrap gap-4 justify-between items-center">
+          <Button
+            onClick={() => navigate("/")}
+            variant="outline"
+            className="cyber-border"
+          >
+            <Home className="w-4 h-4 mr-2" />
+            Dashboard
+          </Button>
           <h1 className="text-4xl font-bold neon-text-cyan animate-glow-pulse">
             🐔 Chicken Road
           </h1>

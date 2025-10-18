@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      emojis: {
+        Row: {
+          bonus_percentage: number
+          created_at: string
+          effect_type: string
+          emoji_symbol: string
+          id: string
+          name: string
+          rarity: string
+        }
+        Insert: {
+          bonus_percentage?: number
+          created_at?: string
+          effect_type: string
+          emoji_symbol: string
+          id?: string
+          name: string
+          rarity: string
+        }
+        Update: {
+          bonus_percentage?: number
+          created_at?: string
+          effect_type?: string
+          emoji_symbol?: string
+          id?: string
+          name?: string
+          rarity?: string
+        }
+        Relationships: []
+      }
       game_history: {
         Row: {
           bet_amount: number
@@ -52,6 +82,33 @@ export type Database = {
           },
         ]
       }
+      loot_boxes: {
+        Row: {
+          created_at: string
+          emoji_pool_size: number
+          id: string
+          name: string
+          price: number
+          secret_chance: number
+        }
+        Insert: {
+          created_at?: string
+          emoji_pool_size?: number
+          id?: string
+          name: string
+          price: number
+          secret_chance: number
+        }
+        Update: {
+          created_at?: string
+          emoji_pool_size?: number
+          id?: string
+          name?: string
+          price?: number
+          secret_chance?: number
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -78,6 +135,38 @@ export type Database = {
           username?: string
         }
         Relationships: []
+      }
+      user_emojis: {
+        Row: {
+          emoji_id: string
+          id: string
+          is_equipped: boolean
+          obtained_at: string
+          user_id: string
+        }
+        Insert: {
+          emoji_id: string
+          id?: string
+          is_equipped?: boolean
+          obtained_at?: string
+          user_id: string
+        }
+        Update: {
+          emoji_id?: string
+          id?: string
+          is_equipped?: boolean
+          obtained_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_emojis_emoji_id_fkey"
+            columns: ["emoji_id"]
+            isOneToOne: false
+            referencedRelation: "emojis"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

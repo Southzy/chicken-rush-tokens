@@ -78,7 +78,7 @@ const Profile = () => {
             className="cyber-border"
           >
             <Home className="w-4 h-4 mr-2" />
-            Back to Game
+            Dashboard
           </Button>
           <Button
             onClick={handleLogout}
