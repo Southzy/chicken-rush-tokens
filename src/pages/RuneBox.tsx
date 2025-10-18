@@ -24,10 +24,10 @@ interface RuneData {
 const RUNE_DATA: RuneData[] = [
   { key: 'rune_a', name: 'Aether Rune', symbol: '✨', effect: '+0.001 Luck', dropRate: 0.30, cap: 500, color: 'from-cyan-500 to-blue-500' },
   { key: 'rune_b', name: 'Blaze Rune', symbol: '🔥', effect: '+0.004 Money Multiplier', dropRate: 0.22, cap: 300, color: 'from-orange-500 to-red-500' },
-  { key: 'rune_c', name: 'Chrono Rune', symbol: '⏰', effect: '+0.0005 Luck & +0.001 Money', dropRate: 0.18, cap: 400, color: 'from-purple-500 to-pink-500' },
-  { key: 'rune_d', name: 'Dusk Rune', symbol: '🌙', effect: '+0.25% Emoji Luck bonus', dropRate: 0.12, cap: 200, color: 'from-indigo-500 to-purple-500' },
-  { key: 'rune_e', name: 'Ember Rune', symbol: '💎', effect: '+0.25% Emoji Money bonus', dropRate: 0.12, cap: 200, color: 'from-yellow-500 to-orange-500' },
-  { key: 'rune_f', name: 'Fate Rune', symbol: '⭐', effect: '+1 Rank Shard', dropRate: 0.06, cap: null, color: 'from-gold to-yellow-500' },
+  { key: 'rune_c', name: 'Chrono Rune', symbol: '⏰', effect: '+0.0005 Luck & +0.001 Money', dropRate: 0.018, cap: 400, color: 'from-purple-500 to-pink-500' },
+  { key: 'rune_d', name: 'Dusk Rune', symbol: '🌙', effect: '+0.25% Emoji Luck bonus', dropRate: 0.012, cap: 200, color: 'from-indigo-500 to-purple-500' },
+  { key: 'rune_e', name: 'Ember Rune', symbol: '💎', effect: '+0.25% Emoji Money bonus', dropRate: 0.012, cap: 2000, color: 'from-yellow-500 to-orange-500' },
+  { key: 'rune_f', name: 'Fate Rune', symbol: '⭐', effect: '+1 Rank Shard', dropRate: 0.006, cap: , color: 'from-gold to-yellow-500' },
 ];
 
 const BOX_PRICE = 1000;
