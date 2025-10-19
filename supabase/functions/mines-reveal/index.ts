@@ -27,12 +27,20 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error('No authorization header');
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     );
@@ -52,8 +60,8 @@ serve(async (req) => {
       throw new Error('Invalid tile index');
     }
 
-    // Get session from database
-    const { data: session, error: sessionError } = await supabase
+    // Fetch session from database
+    const { data: session, error: sessionError } = await supabaseClient
       .from('game_sessions')
       .select('*')
       .eq('game_id', gameId)
@@ -62,6 +70,7 @@ serve(async (req) => {
       .single();
 
     if (sessionError || !session) {
+      console.error('[Mines Reveal] Session not found:', gameId, user.id);
       throw new Error('Invalid or inactive game session');
     }
 
@@ -73,7 +82,7 @@ serve(async (req) => {
 
     if (isMine) {
       // Update session to inactive
-      await supabase
+      await supabaseClient
         .from('game_sessions')
         .update({ is_active: false })
         .eq('game_id', gameId);
@@ -100,15 +109,14 @@ serve(async (req) => {
 
     // Add tile to revealed tiles
     const newRevealedTiles = [...session.revealed_tiles, tileIndex];
-    
-    // Update session in database
-    await supabase
+    const multiplier = calculateMultiplier(session.mine_count, newRevealedTiles.length);
+    const potentialPayout = Math.floor(session.bet_amount * multiplier);
+
+    // Update session
+    await supabaseClient
       .from('game_sessions')
       .update({ revealed_tiles: newRevealedTiles })
       .eq('game_id', gameId);
-
-    const multiplier = calculateMultiplier(session.mine_count, newRevealedTiles.length);
-    const potentialPayout = Math.floor(session.bet_amount * multiplier);
 
     console.log(`[Mines Reveal] User: ${user.id}, GameId: ${gameId}, Result: SAFE, Tile: ${tileIndex}, Multiplier: ${multiplier.toFixed(2)}x`);
 
@@ -130,10 +138,10 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Mines Reveal Error]', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

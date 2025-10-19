@@ -27,12 +27,20 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error('No authorization header');
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     );
@@ -48,8 +56,8 @@ serve(async (req) => {
       throw new Error('Invalid request');
     }
 
-    // Get session from database
-    const { data: session, error: sessionError } = await supabase
+    // Fetch session from database
+    const { data: session, error: sessionError } = await supabaseClient
       .from('game_sessions')
       .select('*')
       .eq('game_id', gameId)
@@ -65,8 +73,8 @@ serve(async (req) => {
       throw new Error('No tiles revealed');
     }
 
-    // Update session to inactive
-    await supabase
+    // Mark session as inactive
+    await supabaseClient
       .from('game_sessions')
       .update({ is_active: false })
       .eq('game_id', gameId);
@@ -113,10 +121,10 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Mines Cashout Error]', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

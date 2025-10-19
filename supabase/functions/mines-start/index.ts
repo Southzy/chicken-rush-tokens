@@ -48,12 +48,20 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    );
+
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) throw new Error('No authorization header');
+
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_ANON_KEY') ?? '',
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: authHeader },
         },
       }
     );
@@ -106,8 +114,8 @@ serve(async (req) => {
     const nonce = 0;
     const minePositions = await generateMinePositions(serverSeed, clientSeed, nonce, mineCount);
 
-    // Store session in database
-    const { error: sessionError } = await supabase
+    // Store session in database using service role key
+    const { error: sessionError } = await supabaseClient
       .from('game_sessions')
       .insert({
         game_id: gameId,
@@ -120,15 +128,11 @@ serve(async (req) => {
         nonce,
         mine_positions: minePositions,
         revealed_tiles: [],
-        is_active: true
+        is_active: true,
       });
 
     if (sessionError) {
-      // Refund the bet
-      await supabase
-        .from('profiles')
-        .update({ token_balance: profile.token_balance })
-        .eq('id', user.id);
+      console.error('[Mines Start DB Error]', sessionError);
       throw new Error('Failed to create game session');
     }
 
@@ -151,10 +155,10 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error('[Mines Start Error]', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
