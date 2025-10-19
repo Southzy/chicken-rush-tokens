@@ -134,17 +134,17 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card 
             className="glass-panel cyber-border hover:scale-105 transition-transform cursor-pointer"
-            onClick={() => navigate("/game")}
+            onClick={() => navigate("/game-selection")}
           >
             <CardHeader>
               <CardTitle className="flex items-center gap-2 neon-text-cyan">
                 <Gamepad2 className="w-6 h-6" />
-                Play Game
+                Play Games
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">
-                Start playing Chicken Road and win tokens!
+                Choose from Chicken Road, Mines, and more!
               </p>
             </CardContent>
           </Card>

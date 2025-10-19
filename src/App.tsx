@@ -4,7 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Dashboard from "./pages/Dashboard";
+import GameSelection from "./pages/GameSelection";
 import Game from "./pages/Game";
+import Mines from "./pages/Mines";
 import Shop from "./pages/Shop";
 import LootBox from "./pages/LootBox";
 import RuneBox from "./pages/RuneBox";
@@ -24,7 +26,9 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/game-selection" element={<GameSelection />} />
           <Route path="/game" element={<Game />} />
+          <Route path="/mines" element={<Mines />} />
           <Route path="/shop" element={<Shop />} />
           <Route path="/lootbox" element={<LootBox />} />
           <Route path="/runebox" element={<RuneBox />} />
