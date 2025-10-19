@@ -6,23 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface GameSession {
-  gameId: string;
-  userId: string;
-  betAmount: number;
-  mineCount: number;
-  serverSeed: string;
-  serverSeedHash: string;
-  clientSeed: string;
-  nonce: number;
-  minePositions: number[];
-  revealedTiles: number[];
-  isActive: boolean;
-  createdAt: number;
-}
-
-const activeSessions = new Map<string, GameSession>();
-
 function calculateMultiplier(mineCount: number, revealedCount: number): number {
   const totalTiles = 25;
   const safeTiles = totalTiles - mineCount;
@@ -69,26 +52,37 @@ serve(async (req) => {
       throw new Error('Invalid tile index');
     }
 
-    const session = activeSessions.get(gameId);
-    if (!session || session.userId !== user.id || !session.isActive) {
+    // Get session from database
+    const { data: session, error: sessionError } = await supabase
+      .from('game_sessions')
+      .select('*')
+      .eq('game_id', gameId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (sessionError || !session) {
       throw new Error('Invalid or inactive game session');
     }
 
-    if (session.revealedTiles.includes(tileIndex)) {
+    if (session.revealed_tiles.includes(tileIndex)) {
       throw new Error('Tile already revealed');
     }
 
-    const isMine = session.minePositions.includes(tileIndex);
+    const isMine = session.mine_positions.includes(tileIndex);
 
     if (isMine) {
-      session.isActive = false;
-      activeSessions.delete(gameId);
+      // Update session to inactive
+      await supabase
+        .from('game_sessions')
+        .update({ is_active: false })
+        .eq('game_id', gameId);
 
       await supabase.from('game_history').insert({
         user_id: user.id,
-        bet_amount: session.betAmount,
+        bet_amount: session.bet_amount,
         multiplier: 0,
-        profit: -session.betAmount,
+        profit: -session.bet_amount,
         difficulty: 'hard',
       });
 
@@ -97,16 +91,24 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({
           result: 'mine',
-          minePositions: session.minePositions,
-          serverSeed: session.serverSeed,
+          minePositions: session.mine_positions,
+          serverSeed: session.server_seed,
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    session.revealedTiles.push(tileIndex);
-    const multiplier = calculateMultiplier(session.mineCount, session.revealedTiles.length);
-    const potentialPayout = Math.floor(session.betAmount * multiplier);
+    // Add tile to revealed tiles
+    const newRevealedTiles = [...session.revealed_tiles, tileIndex];
+    
+    // Update session in database
+    await supabase
+      .from('game_sessions')
+      .update({ revealed_tiles: newRevealedTiles })
+      .eq('game_id', gameId);
+
+    const multiplier = calculateMultiplier(session.mine_count, newRevealedTiles.length);
+    const potentialPayout = Math.floor(session.bet_amount * multiplier);
 
     console.log(`[Mines Reveal] User: ${user.id}, GameId: ${gameId}, Result: SAFE, Tile: ${tileIndex}, Multiplier: ${multiplier.toFixed(2)}x`);
 
@@ -114,21 +116,21 @@ serve(async (req) => {
       JSON.stringify({
         result: 'safe',
         gameState: {
-          gameId: session.gameId,
-          betAmount: session.betAmount,
-          mineCount: session.mineCount,
-          revealedTiles: session.revealedTiles,
+          gameId: session.game_id,
+          betAmount: session.bet_amount,
+          mineCount: session.mine_count,
+          revealedTiles: newRevealedTiles,
           currentMultiplier: multiplier,
           potentialPayout,
-          serverSeedHash: session.serverSeedHash,
-          clientSeed: session.clientSeed,
+          serverSeedHash: session.server_seed_hash,
+          clientSeed: session.client_seed,
           nonce: session.nonce,
           isActive: true,
         },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Mines Reveal Error]', error);
     return new Response(
       JSON.stringify({ error: error.message }),

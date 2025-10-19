@@ -89,6 +89,57 @@ export type Database = {
           },
         ]
       }
+      game_sessions: {
+        Row: {
+          bet_amount: number
+          client_seed: string
+          created_at: string
+          game_id: string
+          id: string
+          is_active: boolean
+          mine_count: number
+          mine_positions: number[]
+          nonce: number
+          revealed_tiles: number[]
+          server_seed: string
+          server_seed_hash: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bet_amount: number
+          client_seed: string
+          created_at?: string
+          game_id: string
+          id?: string
+          is_active?: boolean
+          mine_count: number
+          mine_positions: number[]
+          nonce?: number
+          revealed_tiles?: number[]
+          server_seed: string
+          server_seed_hash: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bet_amount?: number
+          client_seed?: string
+          created_at?: string
+          game_id?: string
+          id?: string
+          is_active?: boolean
+          mine_count?: number
+          mine_positions?: number[]
+          nonce?: number
+          revealed_tiles?: number[]
+          server_seed?: string
+          server_seed_hash?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       loot_boxes: {
         Row: {
           created_at: string
@@ -310,6 +361,10 @@ export type Database = {
       }
     }
     Functions: {
+      cleanup_old_game_sessions: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

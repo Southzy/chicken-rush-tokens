@@ -6,23 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface GameSession {
-  gameId: string;
-  userId: string;
-  betAmount: number;
-  mineCount: number;
-  serverSeed: string;
-  serverSeedHash: string;
-  clientSeed: string;
-  nonce: number;
-  minePositions: number[];
-  revealedTiles: number[];
-  isActive: boolean;
-  createdAt: number;
-}
-
-const activeSessions = new Map<string, GameSession>();
-
 function calculateMultiplier(mineCount: number, revealedCount: number): number {
   const totalTiles = 25;
   const safeTiles = totalTiles - mineCount;
@@ -65,21 +48,32 @@ serve(async (req) => {
       throw new Error('Invalid request');
     }
 
-    const session = activeSessions.get(gameId);
-    if (!session || session.userId !== user.id || !session.isActive) {
+    // Get session from database
+    const { data: session, error: sessionError } = await supabase
+      .from('game_sessions')
+      .select('*')
+      .eq('game_id', gameId)
+      .eq('user_id', user.id)
+      .eq('is_active', true)
+      .single();
+
+    if (sessionError || !session) {
       throw new Error('Invalid or inactive game session');
     }
 
-    if (session.revealedTiles.length === 0) {
+    if (session.revealed_tiles.length === 0) {
       throw new Error('No tiles revealed');
     }
 
-    session.isActive = false;
-    const multiplier = calculateMultiplier(session.mineCount, session.revealedTiles.length);
-    const payout = Math.floor(session.betAmount * multiplier);
-    const profit = payout - session.betAmount;
+    // Update session to inactive
+    await supabase
+      .from('game_sessions')
+      .update({ is_active: false })
+      .eq('game_id', gameId);
 
-    activeSessions.delete(gameId);
+    const multiplier = calculateMultiplier(session.mine_count, session.revealed_tiles.length);
+    const payout = Math.floor(session.bet_amount * multiplier);
+    const profit = payout - session.bet_amount;
 
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
@@ -102,7 +96,7 @@ serve(async (req) => {
 
     await supabase.from('game_history').insert({
       user_id: user.id,
-      bet_amount: session.betAmount,
+      bet_amount: session.bet_amount,
       multiplier,
       profit,
       difficulty: 'hard',
@@ -114,12 +108,12 @@ serve(async (req) => {
       JSON.stringify({
         payout,
         multiplier,
-        minePositions: session.minePositions,
-        serverSeed: session.serverSeed,
+        minePositions: session.mine_positions,
+        serverSeed: session.server_seed,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Mines Cashout Error]', error);
     return new Response(
       JSON.stringify({ error: error.message }),

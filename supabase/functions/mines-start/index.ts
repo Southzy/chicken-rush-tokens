@@ -6,23 +6,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-interface GameSession {
-  gameId: string;
-  userId: string;
-  betAmount: number;
-  mineCount: number;
-  serverSeed: string;
-  serverSeedHash: string;
-  clientSeed: string;
-  nonce: number;
-  minePositions: number[];
-  revealedTiles: number[];
-  isActive: boolean;
-  createdAt: number;
-}
-
-const activeSessions = new Map<string, GameSession>();
-
 async function sha256(message: string): Promise<string> {
   const msgBuffer = new TextEncoder().encode(message);
   const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
@@ -123,22 +106,31 @@ serve(async (req) => {
     const nonce = 0;
     const minePositions = await generateMinePositions(serverSeed, clientSeed, nonce, mineCount);
 
-    const session: GameSession = {
-      gameId,
-      userId: user.id,
-      betAmount,
-      mineCount,
-      serverSeed,
-      serverSeedHash,
-      clientSeed,
-      nonce,
-      minePositions,
-      revealedTiles: [],
-      isActive: true,
-      createdAt: Date.now(),
-    };
+    // Store session in database
+    const { error: sessionError } = await supabase
+      .from('game_sessions')
+      .insert({
+        game_id: gameId,
+        user_id: user.id,
+        bet_amount: betAmount,
+        mine_count: mineCount,
+        server_seed: serverSeed,
+        server_seed_hash: serverSeedHash,
+        client_seed: clientSeed,
+        nonce,
+        mine_positions: minePositions,
+        revealed_tiles: [],
+        is_active: true
+      });
 
-    activeSessions.set(gameId, session);
+    if (sessionError) {
+      // Refund the bet
+      await supabase
+        .from('profiles')
+        .update({ token_balance: profile.token_balance })
+        .eq('id', user.id);
+      throw new Error('Failed to create game session');
+    }
 
     console.log(`[Mines Start] User: ${user.id}, GameId: ${gameId}, Bet: ${betAmount}, Mines: ${mineCount}`);
 
@@ -159,7 +151,7 @@ serve(async (req) => {
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
-  } catch (error) {
+  } catch (error: any) {
     console.error('[Mines Start Error]', error);
     return new Response(
       JSON.stringify({ error: error.message }),
