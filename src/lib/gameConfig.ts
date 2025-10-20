@@ -1,5 +1,7 @@
 // src/lib/gameConfig.ts
-// Centralized Game Configuration — two-phase drop model (+ dev debug boosts)
+// Centralized Game Configuration — two-phase drop model
+// ✅ Supports rank-based luck multiplier in rollRuneTwoPhase(luckMult)
+// ✅ Dev flag (VITE_DROP_DEBUG='1') boosts special group & Void for testing
 
 export type RuneKey =
   | 'rune_a' | 'rune_b' | 'rune_c' | 'rune_d' | 'rune_e' | 'rune_f'
@@ -15,7 +17,7 @@ export interface RuneData {
   key: RuneKey;
   name: string;
   symbol: string;
-  effect: string;    // human-readable; do the actual math in effectRegistry.ts
+  effect: string;    // human-readable; do actual math in effectRegistry.ts
   dropRate: number;  // in-group rate (sums to 1.0 inside its group)
   cap: number | null;
   color: string;     // Tailwind gradient utilities
@@ -43,11 +45,11 @@ export const BOX_PRICE = 1000;
 export const MAX_TOKEN_BALANCE = 1_000_000_000_000; // 1e12
 export const MAX_SHARD_BALANCE = 1_000_000_000_000; // 1e12
 
-// Exchange rates for The Joke Rune (match comments)
+// Exchange rates for The Joke Rune
 export const EXCHANGE_RATES: ExchangeRate = {
   jokeRuneToTokens: 100_000, // 1 Joke Rune = 100k tokens
   jokeRuneToShards: 10,      // 1 Joke Rune = 10 shards
-  jokeRuneForTheJokeRank: 1000, // Need 1000 Joke Runes for The Joke rank
+  jokeRuneForTheJokeRank: 1000,
 };
 
 // =========================
@@ -55,22 +57,22 @@ export const EXCHANGE_RATES: ExchangeRate = {
 // =========================
 export type RuneGroup = 'base' | 'special';
 
-// DEFAULT weights (prod)
+// Default (prod) group weights
 const DEFAULT_GROUP_WEIGHTS = {
-  base: 0.60,
-  special: 0.40,
+  base: 0.97,
+  special: 0.03,
 } as const;
 
-// Dev flag to boost chance (for staging/debug only)
-const DROP_DEBUG = typeof import.meta !== 'undefined'
-  && (import.meta as any).env
-  && (import.meta as any).env.VITE_DROP_DEBUG === '1';
+// Dev flag: boost special chance & Void weight for testing
+const DROP_DEBUG =
+  typeof import.meta !== 'undefined' &&
+  (import.meta as any).env &&
+  (import.meta as any).env.VITE_DROP_DEBUG === '1';
 
 // Effective group weights (debug → special 10%)
-export const GROUP_WEIGHTS = DROP_DEBUG ? {
-  base: 0.90,
-  special: 0.10,
-} as const : DEFAULT_GROUP_WEIGHTS;
+export const GROUP_WEIGHTS = DROP_DEBUG
+  ? ({ base: 0.90, special: 0.10 } as const)
+  : DEFAULT_GROUP_WEIGHTS;
 
 // ----- Base runes (original 6) — raw weights (normalized within group) -----
 type BaseRow = Omit<RuneData, 'dropRate'> & { dropRate: number };
@@ -85,18 +87,17 @@ const BASE_RUNES_RAW: BaseRow[] = [
 ];
 
 // ----- Special runes (7 + Joke) — raw weights (normalized within group) -----
-// DEV: give rune_i (Void) extra weight x3 when VITE_DROP_DEBUG='1' so it obviously appears
-const VOID_WEIGHT = 0.003 * (DROP_DEBUG ? 3 : 1);
+const VOID_WEIGHT = 0.003 * (DROP_DEBUG ? 3 : 1); // dev-only boost for visibility
 
 const SPECIAL_RUNES_RAW: BaseRow[] = [
-  { key:'rune_g', name:'Shadow Rune',   symbol:'🌑', effect:'+0.01 Critical Chance',    dropRate:0.005,  cap:100, color:'from-gray-900 to-gray-700' },
-  { key:'rune_h', name:'Phoenix Rune',  symbol:'🔆', effect:'+0.015 Revival Bonus',     dropRate:0.004,  cap:80,  color:'from-red-600 to-orange-400' },
+  { key:'rune_g', name:'Shadow Rune',   symbol:'🌑', effect:'+0.01 Critical Chance',    dropRate:0.005,   cap:100, color:'from-gray-900 to-gray-700' },
+  { key:'rune_h', name:'Phoenix Rune',  symbol:'🔆', effect:'+0.015 Revival Bonus',     dropRate:0.004,   cap:80,  color:'from-red-600 to-orange-400' },
   { key:'rune_i', name:'Void Rune',     symbol:'🕳️', effect:'+0.02 Void Power',        dropRate:VOID_WEIGHT, cap:60,  color:'from-purple-900 to-black' },
-  { key:'rune_j', name:'Storm Rune',    symbol:'⚡', effect:'+0.025 Lightning Strike',  dropRate:0.0025, cap:50,  color:'from-blue-400 to-cyan-300' },
-  { key:'rune_k', name:'Prism Rune',    symbol:'🌈', effect:'+0.03 Rainbow Luck',       dropRate:0.002,  cap:40,  color:'from-pink-400 via-purple-400 to-blue-400' },
-  { key:'rune_l', name:'Omega Rune',    symbol:'⚛️', effect:'+0.04 Quantum Flux',      dropRate:0.0015, cap:30,  color:'from-indigo-600 to-purple-800' },
-  { key:'rune_m', name:'Genesis Rune',  symbol:'🌟', effect:'+0.05 Creation Energy',    dropRate:0.001,  cap:20,  color:'from-yellow-300 to-amber-500' },
-  { key:'rune_joke', name:'The Joke Rune', symbol:'🃏', effect:'Collectible (Exchange)', dropRate:0.0001, cap:null, color:'from-pink-500 via-purple-500 to-cyan-500' },
+  { key:'rune_j', name:'Storm Rune',    symbol:'⚡', effect:'+0.025 Lightning Strike',  dropRate:0.0025,  cap:50,  color:'from-blue-400 to-cyan-300' },
+  { key:'rune_k', name:'Prism Rune',    symbol:'🌈', effect:'+0.03 Rainbow Luck',       dropRate:0.002,   cap:40,  color:'from-pink-400 via-purple-400 to-blue-400' },
+  { key:'rune_l', name:'Omega Rune',    symbol:'⚛️', effect:'+0.04 Quantum Flux',      dropRate:0.0015,  cap:30,  color:'from-indigo-600 to-purple-800' },
+  { key:'rune_m', name:'Genesis Rune',  symbol:'🌟', effect:'+0.05 Creation Energy',    dropRate:0.001,   cap:20,  color:'from-yellow-300 to-amber-500' },
+  { key:'rune_joke', name:'The Joke Rune', symbol:'🃏', effect:'Collectible (Exchange)', dropRate:0.0001,  cap:null, color:'from-pink-500 via-purple-500 to-cyan-500' },
 ];
 
 // Normalize helper (sum to 1.0 inside a group)
@@ -109,7 +110,7 @@ function normalizeGroup<T extends { dropRate: number }>(arr: T[]): T[] {
 export const RUNE_BASE: RuneData[] = normalizeGroup(BASE_RUNES_RAW as RuneData[]);
 export const RUNE_SPECIAL: RuneData[] = normalizeGroup(SPECIAL_RUNES_RAW as RuneData[]);
 
-// Effective rate (what players actually see) = groupWeight × in-group rate
+// Effective rate (what players actually see) = groupWeight × in-group rate (without rank bonus)
 export function getEffectiveDropRate(key: RuneKey): number {
   const b = RUNE_BASE.find(r => r.key === key);
   if (b) return GROUP_WEIGHTS.base * b.dropRate;
@@ -118,16 +119,25 @@ export function getEffectiveDropRate(key: RuneKey): number {
   return 0;
 }
 
-// For display (sorted by effective rate)
+// For display (baseline; rank luck is dynamic per player)
 export const RUNE_DATA_FOR_DISPLAY: (RuneData & { group: RuneGroup, effectiveDropRate: number })[] = [
   ...RUNE_BASE.map(r => ({ ...r, group: 'base' as const,    effectiveDropRate: GROUP_WEIGHTS.base * r.dropRate })),
   ...RUNE_SPECIAL.map(r => ({ ...r, group: 'special' as const, effectiveDropRate: GROUP_WEIGHTS.special * r.dropRate })),
 ].sort((a, b) => b.effectiveDropRate - a.effectiveDropRate);
 
-// Roll function (two-phase)
-export function rollRuneTwoPhase(): RuneKey {
+// Utility clamp
+const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
+
+// Roll function (two-phase) with rank luck multiplier
+// - luckMult >= 1 boosts special chance; we cap at 50% to avoid extreme skew
+export function rollRuneTwoPhase(luckMult = 1): RuneKey {
+  const minSpecial = GROUP_WEIGHTS.special;
+  const maxSpecial = 0.50; // adjust if you want higher ceiling
+  const specialEff = clamp(GROUP_WEIGHTS.special * Math.max(1, luckMult), minSpecial, maxSpecial);
+  const baseEff = 1 - specialEff;
+
   const gate = Math.random();
-  const pool = gate < GROUP_WEIGHTS.special ? RUNE_SPECIAL : RUNE_BASE;
+  const pool = gate < specialEff ? RUNE_SPECIAL : RUNE_BASE;
 
   let cum = 0;
   const r = Math.random();
@@ -138,7 +148,7 @@ export function rollRuneTwoPhase(): RuneKey {
   return pool[pool.length - 1].key; // fallback guard
 }
 
-// ===== Ranks (unchanged) =====
+// ===== Ranks =====
 export const RANK_DATA: RankData[] = [
   { key: 'nova_cadet',         name: 'Nova Cadet',         badge: '🌠', luckMult: 1.0,  moneyMult: 1.0,  gradient: 'from-blue-400 to-cyan-300' },
   { key: 'quantum_ranger',     name: 'Quantum Ranger',     price: 5_000,   badge: '⚡', luckMult: 1.05, moneyMult: 1.1,  gradient: 'from-purple-500 to-pink-400' },
@@ -155,3 +165,7 @@ export const RANK_DATA: RankData[] = [
 
   { key: 'the_joke',           name: 'The Joke',           badge: '🃏', luckMult: 1000.0, moneyMult: 100.0, gradient: 'from-pink-500 via-purple-500 to-cyan-500' },
 ];
+
+// Helper to get rank data
+export const getRankData = (key: UserRank): RankData | undefined =>
+  RANK_DATA.find(r => r.key === key);
