@@ -57,8 +57,8 @@ export type RuneGroup = 'base' | 'special';
 
 // DEFAULT weights (prod)
 const DEFAULT_GROUP_WEIGHTS = {
-  base: 0.97,
-  special: 0.03,
+  base: 0.60,
+  special: 0.40,
 } as const;
 
 // Dev flag to boost chance (for staging/debug only)
