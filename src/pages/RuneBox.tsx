@@ -144,7 +144,7 @@ const RuneBox = () => {
     setOpening(true);
 
     // ✅ Bulk path (>= 10) — ส่งเฉพาะ body (ไม่มี header custom เพื่อเลี่ยง CORS)
-    if (quantity >= 10) {
+    if (quantity >= 1000) {
       try {
         const { data, error } = await supabase.functions.invoke('bulk-open-runebox', {
           body: { quantity, boxType },
