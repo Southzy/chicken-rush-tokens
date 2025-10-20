@@ -1,3 +1,4 @@
+// supabase/functions/bulk-open-runebox/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
@@ -6,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// ---- Prices per box type (ให้ตรงกับ client) ----
+// ---- Prices (ต้องตรงกับ client) ----
 const BOX_PRICE_BASIC = 1000;
 const BOX_PRICE_SPECIAL = 5000;
 const MAX_BOXES_PER_REQUEST = 10000;
@@ -15,11 +16,11 @@ type BoxType = "basic" | "special";
 
 interface RawRune {
   key: string;
-  dropRate: number; // raw weight ภายในพูลของตัวเอง
+  dropRate: number;      // raw weight ภายในพูล
   cap: number | null;
 }
 interface Rune extends RawRune {
-  dropRate: number; // normalized ภายในพูล (sum = 1)
+  dropRate: number;      // normalized ภายในพูล (sum = 1)
 }
 
 interface OpenResult {
@@ -29,8 +30,8 @@ interface OpenResult {
   nonce: string;
 }
 
-// ===== ชุดอัตรา "เท่ากับใน gameConfig" =====
-// Base (6 รูน) — ใช้ weights ตาม gameConfig; จะ normalize ภายในพูล
+// ===== อัตราตาม gameConfig (เวอร์ชันแยกพูล) =====
+// Base (6) — normalize ในพูล
 const BASE_CONFIG_RAW: RawRune[] = [
   { key: "rune_a", dropRate: 0.30, cap: 500 },
   { key: "rune_b", dropRate: 0.22, cap: 300 },
@@ -40,7 +41,7 @@ const BASE_CONFIG_RAW: RawRune[] = [
   { key: "rune_f", dropRate: 0.06, cap: null },
 ];
 
-// Special (7 + Joke) — ใช้ weights ตาม gameConfig; จะ normalize ภายในพูล
+// Special (7 + Joke) — normalize ในพูล
 const SPECIAL_CONFIG_RAW: RawRune[] = [
   { key: "rune_g",    dropRate: 0.005,  cap: 100 },
   { key: "rune_h",    dropRate: 0.004,  cap: 80  },
@@ -49,7 +50,7 @@ const SPECIAL_CONFIG_RAW: RawRune[] = [
   { key: "rune_k",    dropRate: 0.002,  cap: 40  },
   { key: "rune_l",    dropRate: 0.0015, cap: 30  },
   { key: "rune_m",    dropRate: 0.001,  cap: 20  },
-  { key: "rune_joke", dropRate: 0.0001, cap: null }, // 1 in 10,000 (ในพูล special)
+  { key: "rune_joke", dropRate: 0.0001, cap: null }, // 1 in 10,000 ในพูล Special
 ];
 
 // ===== Helpers =====
@@ -77,16 +78,18 @@ function generateNonce(): string {
   return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// Diminishing returns: เมื่อเกิน 90% ของ cap ลดโอกาส 50%
 function applyDiminishingReturns(currentCount: number, cap: number | null, gains: number): number {
   if (!cap) return gains;
   const nearCap = cap * 0.9;
   if (currentCount >= cap) return 0;
-  if (currentCount >= nearCap) return gains * 0.5; // 50% โอกาส (จะแปลงเป็น 0/1 ตอนท้าย)
+  if (currentCount >= nearCap) return gains * 0.5; // แปลงเป็น 0/1 ภายหลัง
   return gains;
 }
 
+// สุ่มจากพูลเดียว (ตามชนิดกล่อง)
 function rollFromPool(currentInventory: Record<string, number>, pool: Rune[], nonce: string): OpenResult {
-  // NOTE: ในโปรดักชันสามารถแทน Math.random ด้วย hash(nonce, serverSeed, ...) เพื่อ provable fairness
+  // NOTE: ผลิตภัณฑ์จริงควรใช้ hash(nonce, serverSeed, ...) แทน Math.random()
   const _hashInput = nonce + Date.now().toString();
   const r = Math.random();
 
@@ -105,7 +108,7 @@ function rollFromPool(currentInventory: Record<string, number>, pool: Rune[], no
       };
     }
   }
-  // guard
+  // Guard
   const last = pool[pool.length - 1];
   const cur = Number(currentInventory[last.key] ?? 0);
   const fractional = applyDiminishingReturns(cur, last.cap, 1);
@@ -129,11 +132,12 @@ serve(async (req) => {
     const { data: { user }, error: userErr } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
     if (userErr || !user) throw new Error("Unauthorized");
 
+    // Body
     const body = await req.json().catch(() => ({} as any));
     const quantityRaw = Number(body?.quantity);
     const quantity = Math.max(1, Math.min(MAX_BOXES_PER_REQUEST, isFinite(quantityRaw) ? quantityRaw : 1));
 
-    // ✅ รับ boxType จาก client (default basic เพื่อรองรับ backward)
+    // ✅ รับ boxType จาก client (default = basic สำหรับ backward-compat)
     const boxType: BoxType = body?.boxType === "special" ? "special" : "basic";
 
     console.log(`bulk-open-runebox: user=${user.id} quantity=${quantity} boxType=${boxType}`);
@@ -146,7 +150,6 @@ serve(async (req) => {
       .single();
     if (pErr || !profile) throw new Error("Profile not found");
 
-    // Pricing by box type
     const totalCost = priceOf(boxType) * quantity;
     if ((profile.token_balance ?? 0) < totalCost) throw new Error("Insufficient tokens");
 
@@ -179,7 +182,7 @@ serve(async (req) => {
       results.push(res);
     }
 
-    // Update profile balances
+    // Update profile (charge tokens + add shards)
     const { error: profileErr } = await supabase
       .from("profiles")
       .update({
@@ -203,21 +206,19 @@ serve(async (req) => {
       .eq("user_id", user.id);
     if (invErr) throw new Error("Failed to update inventory");
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        boxType,
-        results,
-        summary: {
-          boxesOpened: quantity,
-          tokensSpent: totalCost,
-          shardsGained: totalShards,
-          newTokenBalance: (profile.token_balance ?? 0) - totalCost,
-          newShardBalance: (profile.rank_shards ?? 0) + totalShards,
-        },
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    return new Response(JSON.stringify({
+      success: true,
+      boxType,
+      results,
+      summary: {
+        boxesOpened: quantity,
+        tokensSpent: totalCost,
+        shardsGained: totalShards,
+        newTokenBalance: (profile.token_balance ?? 0) - totalCost,
+        newShardBalance: (profile.rank_shards ?? 0) + totalShards,
+      },
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
   } catch (err) {
     console.error("Error in bulk-open-runebox:", err);
     const msg = err instanceof Error ? err.message : "Unknown error";
