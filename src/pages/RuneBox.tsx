@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { formatTokenBalance } from "@/lib/utils";
 
-// ✅ เปลี่ยน import ให้รองรับ 2 เฟส + rate ที่เพิ่มแล้ว
 import {
   BOX_PRICE,
   RUNE_BASE,
@@ -18,7 +17,7 @@ import {
   rollRuneTwoPhase,
   getEffectiveDropRate,
   type RuneKey,
-  type RuneData
+  type RuneData,
 } from "@/lib/gameConfig";
 
 import { Switch } from "@/components/ui/switch";
@@ -90,9 +89,7 @@ const RuneBox = () => {
     if (!cap) return 1;
     if (currentCount >= cap) return 0;
     const ratio = currentCount / cap;
-    if (ratio >= 0.9) {
-      return Math.random() < 0.5 ? 1 : 0;
-    }
+    if (ratio >= 0.9) return Math.random() < 0.5 ? 1 : 0;
     return 1;
   };
 
@@ -145,7 +142,7 @@ const RuneBox = () => {
       }
     }
 
-    // Client path (recommend moving to server)
+    // Client path (recommend to move to server for atomicity)
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ token_balance: profile.token_balance - totalPrice })
@@ -320,7 +317,7 @@ const RuneBox = () => {
                   max="10000"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, Math.min(10000, parseInt(e.target.value) || 1)))}
-                  className="cyber-border max-w-[120px]"
+                  className="cyber-border max-w=[120px]"
                 />
                 {quantity >= 100 && (
                   <span className="text-xs text-muted-foreground">Uses bulk server processing</span>
@@ -423,3 +420,11 @@ const RuneBox = () => {
 };
 
 export default RuneBox;
+
+function formatRatePct(effective: number) {
+  const p = effective * 100;
+  if (p >= 1) return `${p.toFixed(2)}%`;
+  if (p >= 0.1) return `${p.toFixed(3)}%`;
+  if (p >= 0.01) return `${p.toFixed(4)}%`;
+  return "<0.01%";
+}
