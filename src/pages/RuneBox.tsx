@@ -52,7 +52,6 @@ const BOX_META: Record<BoxType, { title: string; icon: JSX.Element; price: numbe
   },
 };
 
-// Helper to roll by box type
 function rollByBox(box: BoxType): RuneKey {
   return box === "special" ? rollSpecialRune() : rollBasicRune();
 }
@@ -65,8 +64,6 @@ const RuneBox = () => {
   const [opening, setOpening] = useState(false);
   const [revealedRunes, setRevealedRunes] = useState<any[]>([]);
   const [showResults, setShowResults] = useState<boolean>(true);
-
-  // NEW: box selector
   const [boxType, setBoxType] = useState<BoxType>("basic");
 
   useEffect(() => {
@@ -111,14 +108,12 @@ const RuneBox = () => {
     }
   };
 
-  // Rank (optional display – ไม่มีผลกับดรอปในเวอร์ชันนี้)
   const rankKey: UserRank = (
     profile?.rank ?? profile?.current_rank ?? profile?.user_rank ?? 'nova_cadet'
   ) as UserRank;
   const rankData = getRankData(rankKey) ?? getRankData('nova_cadet')!;
   const rankLuckMult = typeof rankData?.luckMult === 'number' ? rankData.luckMult : 1;
 
-  // Diminishing returns: integer-only (0/1)
   const applyDiminishingReturns = (currentCount: number, cap: number | null): number => {
     if (!cap) return 1;
     if (currentCount >= cap) return 0;
@@ -148,12 +143,11 @@ const RuneBox = () => {
 
     setOpening(true);
 
-    // ✅ Bulk path (>= 10) — ส่งทั้ง body + header เพื่อกันกรณี body หล่น
+    // ✅ Bulk path (>= 10) — ส่งเฉพาะ body (ไม่มี header custom เพื่อเลี่ยง CORS)
     if (quantity >= 10) {
       try {
         const { data, error } = await supabase.functions.invoke('bulk-open-runebox', {
           body: { quantity, boxType },
-          headers: { 'x-box-type': boxType }, // ⬅ เพิ่ม header กันพลาด
         });
         if (error) throw error;
 
@@ -178,7 +172,7 @@ const RuneBox = () => {
       }
     }
 
-    // Client path (atomicity น้อยกว่า ควรย้ายไป server)
+    // Client path (< 10)
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ token_balance: profile.token_balance - totalPrice })
@@ -254,7 +248,7 @@ const RuneBox = () => {
     if (percentage >= 100) return { color: 'text-red-500', text: 'CAPPED' };
     if (percentage >= 90) return { color: 'text-yellow-500', text: `${Math.floor(percentage)}% (Diminished)` };
     return { color: 'text-green-500', text: `${Math.floor(percentage)}%` };
-  };
+    };
 
   if (!profile || !inventory) {
     return (
@@ -417,7 +411,6 @@ const RuneBox = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-muted-foreground">{rune.effect}</span>
-                      {/* in-pool rate (normalized to 100% within this box) */}
                       <span className="neon-text-purple font-bold">{(rune.dropRate * 100).toFixed(3)}%</span>
                       {rune.cap && <span className="text-xs text-yellow-500">Cap: {rune.cap}</span>}
                     </div>
