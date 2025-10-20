@@ -1,10 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-box-type",
-};
+const baseCors = { "Access-Control-Allow-Origin": "*" };
+function corsFrom(req: Request) {
+  const reqAllowHeaders =
+    req.headers.get("Access-Control-Request-Headers") ??
+    "authorization, x-client-info, apikey, content-type";
+  return {
+    ...baseCors,
+    "Access-Control-Allow-Headers": reqAllowHeaders,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
+}
 
 const BOX_PRICE_BASIC = 1000;
 const BOX_PRICE_SPECIAL = 5000;
@@ -12,11 +19,7 @@ const MAX_BOXES_PER_REQUEST = 10000;
 
 type BoxType = "basic" | "special";
 
-interface RawRune {
-  key: string;
-  dropRate: number;
-  cap: number | null;
-}
+interface RawRune { key: string; dropRate: number; cap: number | null; }
 interface Rune extends RawRune { dropRate: number; }
 interface OpenResult {
   runeKey: string;
@@ -87,7 +90,9 @@ function rollOnce(inv: Record<string, number>, pool: Rune[], nonce: string): Ope
 }
 
 serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsFrom(req) });
+  }
 
   try {
     const supabase = createClient(
@@ -98,17 +103,15 @@ serve(async (req) => {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) throw new Error("No authorization header");
 
-    const { data: { user }, error: uErr } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+    const { data: { user }, error: uErr } =
+      await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
     if (uErr || !user) throw new Error("Unauthorized");
 
     const body = await req.json().catch(() => ({} as any));
     const quantity = Math.max(1, Math.min(MAX_BOXES_PER_REQUEST, Number(body?.quantity) || 1));
 
-    // ✅ อ่าน boxType จาก body หรือ fallback จาก header
-    const headerBox = (req.headers.get("x-box-type") || "").toLowerCase();
-    const candidate = (body?.boxType || "").toLowerCase();
-    const boxType: BoxType =
-      candidate === "special" || headerBox === "special" ? "special" : "basic";
+    // ✅ อ่าน boxType จาก body (ไม่มี header custom)
+    const boxType: BoxType = body?.boxType === "special" ? "special" : "basic";
 
     console.log(`bulk-open-runebox: user=${user.id} qty=${quantity} boxType=${boxType}`);
 
@@ -177,13 +180,13 @@ serve(async (req) => {
         newTokenBalance: (profile.token_balance ?? 0) - totalCost,
         newShardBalance: (profile.rank_shards ?? 0) + totalShards,
       },
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }), { headers: { ...corsFrom(req), "Content-Type": "application/json" } });
+
   } catch (e) {
-    console.error("bulk-open-runebox error:", e);
     const msg = e instanceof Error ? e.message : "Unknown error";
     return new Response(JSON.stringify({ error: msg }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsFrom(req), "Content-Type": "application/json" },
     });
   }
 });
