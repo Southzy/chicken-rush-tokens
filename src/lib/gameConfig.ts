@@ -1,7 +1,7 @@
 // src/lib/gameConfig.ts
-// Centralized Game Configuration — two-phase drop model
-// ✅ Supports rank-based luck multiplier in rollRuneTwoPhase(luckMult)
-// ✅ Dev flag (VITE_DROP_DEBUG='1') boosts special group & Void for testing
+// Centralized Game Configuration — split loot boxes: Basic vs Special
+// - Basic Box: roll from RUNE_BASE only
+// - Special Box: roll from RUNE_SPECIAL only
 
 export type RuneKey =
   | 'rune_a' | 'rune_b' | 'rune_c' | 'rune_d' | 'rune_e' | 'rune_f'
@@ -17,8 +17,8 @@ export interface RuneData {
   key: RuneKey;
   name: string;
   symbol: string;
-  effect: string;    // human-readable; do actual math in effectRegistry.ts
-  dropRate: number;  // in-group rate (sums to 1.0 inside its group)
+  effect: string;    // display text
+  dropRate: number;  // in-group rate (sum = 1 within its own pool)
   cap: number | null;
   color: string;     // Tailwind gradient utilities
 }
@@ -41,7 +41,8 @@ export interface ExchangeRate {
 }
 
 // Economy constants
-export const BOX_PRICE = 1000;
+export const BOX_PRICE_BASIC = 1000;
+export const BOX_PRICE_SPECIAL = 5000;
 export const MAX_TOKEN_BALANCE = 1_000_000_000_000; // 1e12
 export const MAX_SHARD_BALANCE = 1_000_000_000_000; // 1e12
 
@@ -52,47 +53,24 @@ export const EXCHANGE_RATES: ExchangeRate = {
   jokeRuneForTheJokeRank: 1000,
 };
 
-// =========================
-// Two-phase drop parameters
-// =========================
-export type RuneGroup = 'base' | 'special';
+// ----- Base runes (original 6) — raw weights (normalized within pool) -----
+type Row = Omit<RuneData, 'dropRate'> & { dropRate: number };
 
-// Default (prod) group weights
-const DEFAULT_GROUP_WEIGHTS = {
-  base: 0.57,
-  special: 0.43,
-} as const;
-
-// Dev flag: boost special chance & Void weight for testing
-const DROP_DEBUG =
-  typeof import.meta !== 'undefined' &&
-  (import.meta as any).env &&
-  (import.meta as any).env.VITE_DROP_DEBUG === '1';
-
-// Effective group weights (debug → special 10%)
-export const GROUP_WEIGHTS = DROP_DEBUG
-  ? ({ base: 0.90, special: 0.10 } as const)
-  : DEFAULT_GROUP_WEIGHTS;
-
-// ----- Base runes (original 6) — raw weights (normalized within group) -----
-type BaseRow = Omit<RuneData, 'dropRate'> & { dropRate: number };
-
-const BASE_RUNES_RAW: BaseRow[] = [
+const BASE_RUNES_RAW: Row[] = [
   { key:'rune_a', name:'Aether Rune',  symbol:'✨', effect:'+0.001 Luck',                         dropRate:0.30,  cap:500,  color:'from-cyan-500 to-blue-500' },
   { key:'rune_b', name:'Blaze Rune',   symbol:'🔥', effect:'+0.004 Money Multiplier',             dropRate:0.22,  cap:300,  color:'from-orange-500 to-red-500' },
   { key:'rune_c', name:'Chrono Rune',  symbol:'⏰', effect:'+0.0005 Luck & +0.001 Money',         dropRate:0.18,  cap:400,  color:'from-purple-500 to-pink-500' },
   { key:'rune_d', name:'Dusk Rune',    symbol:'🌙', effect:'+0.25% Emoji Luck bonus',             dropRate:0.12,  cap:200,  color:'from-indigo-500 to-purple-500' },
   { key:'rune_e', name:'Ember Rune',   symbol:'💎', effect:'+0.25% Emoji Money bonus',            dropRate:0.12,  cap:200,  color:'from-yellow-500 to-orange-500' },
+  // 'from-gold' ไม่ใช่ Tailwind มาตรฐาน → ใช้ amber แทน
   { key:'rune_f', name:'Fate Rune',    symbol:'⭐', effect:'+1 Rank Shard',                       dropRate:0.06,  cap:null, color:'from-amber-400 to-yellow-500' },
 ];
 
-// ----- Special runes (7 + Joke) — raw weights (normalized within group) -----
-const VOID_WEIGHT = 0.003 * (DROP_DEBUG ? 3 : 1); // dev-only boost for visibility
-
-const SPECIAL_RUNES_RAW: BaseRow[] = [
+// ----- Special runes (7 + Joke) — raw weights (normalized within pool) -----
+const SPECIAL_RUNES_RAW: Row[] = [
   { key:'rune_g', name:'Shadow Rune',   symbol:'🌑', effect:'+0.01 Critical Chance',    dropRate:0.005,   cap:100, color:'from-gray-900 to-gray-700' },
   { key:'rune_h', name:'Phoenix Rune',  symbol:'🔆', effect:'+0.015 Revival Bonus',     dropRate:0.004,   cap:80,  color:'from-red-600 to-orange-400' },
-  { key:'rune_i', name:'Void Rune',     symbol:'🕳️', effect:'+0.02 Void Power',        dropRate:VOID_WEIGHT, cap:60,  color:'from-purple-900 to-black' },
+  { key:'rune_i', name:'Void Rune',     symbol:'🕳️', effect:'+0.02 Void Power',        dropRate:0.003,   cap:60,  color:'from-purple-900 to-black' },
   { key:'rune_j', name:'Storm Rune',    symbol:'⚡', effect:'+0.025 Lightning Strike',  dropRate:0.0025,  cap:50,  color:'from-blue-400 to-cyan-300' },
   { key:'rune_k', name:'Prism Rune',    symbol:'🌈', effect:'+0.03 Rainbow Luck',       dropRate:0.002,   cap:40,  color:'from-pink-400 via-purple-400 to-blue-400' },
   { key:'rune_l', name:'Omega Rune',    symbol:'⚛️', effect:'+0.04 Quantum Flux',      dropRate:0.0015,  cap:30,  color:'from-indigo-600 to-purple-800' },
@@ -100,45 +78,18 @@ const SPECIAL_RUNES_RAW: BaseRow[] = [
   { key:'rune_joke', name:'The Joke Rune', symbol:'🃏', effect:'Collectible (Exchange)', dropRate:0.0001,  cap:null, color:'from-pink-500 via-purple-500 to-cyan-500' },
 ];
 
-// Normalize helper (sum to 1.0 inside a group)
-function normalizeGroup<T extends { dropRate: number }>(arr: T[]): T[] {
+// Normalize helper (sum to 1.0 inside a pool)
+function normalizePool<T extends { dropRate: number }>(arr: T[]): T[] {
   const s = arr.reduce((x, r) => x + r.dropRate, 0);
   return s > 0 ? arr.map(r => ({ ...r, dropRate: r.dropRate / s })) : arr;
 }
 
-// Final in-group tables
-export const RUNE_BASE: RuneData[] = normalizeGroup(BASE_RUNES_RAW as RuneData[]);
-export const RUNE_SPECIAL: RuneData[] = normalizeGroup(SPECIAL_RUNES_RAW as RuneData[]);
+// Final per-pool tables
+export const RUNE_BASE: RuneData[] = normalizePool(BASE_RUNES_RAW as RuneData[]);
+export const RUNE_SPECIAL: RuneData[] = normalizePool(SPECIAL_RUNES_RAW as RuneData[]);
 
-// Effective rate (what players actually see) = groupWeight × in-group rate (without rank bonus)
-export function getEffectiveDropRate(key: RuneKey): number {
-  const b = RUNE_BASE.find(r => r.key === key);
-  if (b) return GROUP_WEIGHTS.base * b.dropRate;
-  const s = RUNE_SPECIAL.find(r => r.key === key);
-  if (s) return GROUP_WEIGHTS.special * s.dropRate;
-  return 0;
-}
-
-// For display (baseline; rank luck is dynamic per player)
-export const RUNE_DATA_FOR_DISPLAY: (RuneData & { group: RuneGroup, effectiveDropRate: number })[] = [
-  ...RUNE_BASE.map(r => ({ ...r, group: 'base' as const,    effectiveDropRate: GROUP_WEIGHTS.base * r.dropRate })),
-  ...RUNE_SPECIAL.map(r => ({ ...r, group: 'special' as const, effectiveDropRate: GROUP_WEIGHTS.special * r.dropRate })),
-].sort((a, b) => b.effectiveDropRate - a.effectiveDropRate);
-
-// Utility clamp
-const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
-
-// Roll function (two-phase) with rank luck multiplier
-// - luckMult >= 1 boosts special chance; we cap at 50% to avoid extreme skew
-export function rollRuneTwoPhase(luckMult = 1): RuneKey {
-  const minSpecial = GROUP_WEIGHTS.special;
-  const maxSpecial = 0.50; // adjust if you want higher ceiling
-  const specialEff = clamp(GROUP_WEIGHTS.special * Math.max(1, luckMult), minSpecial, maxSpecial);
-  const baseEff = 1 - specialEff;
-
-  const gate = Math.random();
-  const pool = gate < specialEff ? RUNE_SPECIAL : RUNE_BASE;
-
+// === Rollers (single-phase by pool) ===
+function rollFromPool(pool: RuneData[]): RuneKey {
   let cum = 0;
   const r = Math.random();
   for (const rune of pool) {
@@ -148,7 +99,15 @@ export function rollRuneTwoPhase(luckMult = 1): RuneKey {
   return pool[pool.length - 1].key; // fallback guard
 }
 
-// ===== Ranks =====
+export function rollBasicRune(): RuneKey {
+  return rollFromPool(RUNE_BASE);
+}
+
+export function rollSpecialRune(): RuneKey {
+  return rollFromPool(RUNE_SPECIAL);
+}
+
+// ===== Ranks (unchanged) =====
 export const RANK_DATA: RankData[] = [
   { key: 'nova_cadet',         name: 'Nova Cadet',         badge: '🌠', luckMult: 1.0,  moneyMult: 1.0,  gradient: 'from-blue-400 to-cyan-300' },
   { key: 'quantum_ranger',     name: 'Quantum Ranger',     price: 5_000,   badge: '⚡', luckMult: 1.05, moneyMult: 1.1,  gradient: 'from-purple-500 to-pink-400' },
@@ -166,6 +125,9 @@ export const RANK_DATA: RankData[] = [
   { key: 'the_joke',           name: 'The Joke',           badge: '🃏', luckMult: 1000.0, moneyMult: 100.0, gradient: 'from-pink-500 via-purple-500 to-cyan-500' },
 ];
 
-// Helper to get rank data
+// Helpers
 export const getRankData = (key: UserRank): RankData | undefined =>
   RANK_DATA.find(r => r.key === key);
+
+export const findRuneData = (key: RuneKey): RuneData | undefined =>
+  RUNE_BASE.find(r => r.key === key) || RUNE_SPECIAL.find(r => r.key === key);
