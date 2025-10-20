@@ -148,11 +148,12 @@ const RuneBox = () => {
 
     setOpening(true);
 
-    // ✅ Bulk path via Edge Function (>= 10 ให้ตรงกับฝั่ง server)
+    // ✅ Bulk path (>= 10) — ส่งทั้ง body + header เพื่อกันกรณี body หล่น
     if (quantity >= 10) {
       try {
         const { data, error } = await supabase.functions.invoke('bulk-open-runebox', {
-          body: { quantity, boxType }, // ส่ง boxType ให้ server เลือกพูลเอง
+          body: { quantity, boxType },
+          headers: { 'x-box-type': boxType }, // ⬅ เพิ่ม header กันพลาด
         });
         if (error) throw error;
 
