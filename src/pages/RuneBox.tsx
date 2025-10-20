@@ -16,8 +16,10 @@ import {
   RUNE_DATA_FOR_DISPLAY,
   rollRuneTwoPhase,
   getEffectiveDropRate,
+  getRankData,
   type RuneKey,
   type RuneData,
+  type UserRank,
 } from "@/lib/gameConfig";
 
 import { Switch } from "@/components/ui/switch";
@@ -30,6 +32,7 @@ type InventoryRecord = Record<string, number> & {
   rune_joke?: number;
 };
 
+// Helper to locate rune by key across both groups
 const findRune = (key: RuneKey) =>
   (RUNE_BASE.find(r => r.key === key) || RUNE_SPECIAL.find(r => r.key === key)) as RuneData;
 
@@ -84,6 +87,18 @@ const RuneBox = () => {
     }
   };
 
+  // === Rank Luck Multiplier ============
+  // รองรับหลายชื่อฟิลด์ที่อาจใช้อยู่ในโปรเจกต์จริง (เลือกตัวที่พบได้ก่อน)
+  const rankKey: UserRank = (
+    profile?.rank ??
+    profile?.current_rank ??
+    profile?.user_rank ??
+    'nova_cadet'
+  ) as UserRank;
+
+  const rankData = getRankData(rankKey) ?? getRankData('nova_cadet')!;
+  const rankLuckMult = typeof rankData?.luckMult === 'number' ? rankData.luckMult : 1;
+
   // Stochastic diminishing returns → integer only (0/1)
   const applyDiminishingReturns = (currentCount: number, cap: number | null): number => {
     if (!cap) return 1;
@@ -93,9 +108,9 @@ const RuneBox = () => {
     return 1;
   };
 
-  // ใช้สุ่มแบบ 2 เฟส (กลุ่ม → ในกลุ่ม)
+  // ใช้สุ่มแบบ 2 เฟส (กลุ่ม → ในกลุ่ม) โดยส่ง rankLuckMult เข้าไป
   const rollRune = (currentInventory: InventoryRecord): { rune: RuneData; actualGain: number } => {
-    const key = rollRuneTwoPhase();
+    const key = rollRuneTwoPhase(rankLuckMult);
     const rune = findRune(key);
     const currentCount = (currentInventory[key] as number) || 0;
     const actualGain = applyDiminishingReturns(currentCount, rune.cap);
@@ -113,11 +128,11 @@ const RuneBox = () => {
 
     setOpening(true);
 
-    // Server bulk path
+    // Path: bulk via Edge Function (ควรใช้ในโปรดักชัน)
     if (quantity >= 100) {
       try {
         const { data, error } = await supabase.functions.invoke('bulk-open-runebox', {
-          body: { quantity },
+          body: { quantity, rankLuckMult }, // ✅ ส่งตัวคูณ rank ไปให้ server ใช้สุ่มเหมือนกัน
         });
         if (error) throw error;
 
@@ -142,7 +157,7 @@ const RuneBox = () => {
       }
     }
 
-    // Client path (recommend to move to server for atomicity)
+    // Path: client-side (เดโม่/ของเดิม)
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ token_balance: profile.token_balance - totalPrice })
@@ -256,6 +271,10 @@ const RuneBox = () => {
                 Rune Box
               </h1>
               <p className="text-muted-foreground mt-1">Collect powerful runes to enhance your stats!</p>
+              {/* แสดง rank/luck ปัจจุบันแบบเบาๆ (optional) */}
+              <p className="text-xs text-muted-foreground mt-1">
+                Rank: <span className="font-semibold">{rankData.name}</span> · Luck x{rankLuckMult.toFixed(2)}
+              </p>
             </div>
           </div>
           <TokenDisplay balance={profile.token_balance} />
@@ -317,7 +336,7 @@ const RuneBox = () => {
                   max="10000"
                   value={quantity}
                   onChange={(e) => setQuantity(Math.max(1, Math.min(10000, parseInt(e.target.value) || 1)))}
-                  className="cyber-border max-w=[120px]"
+                  className="cyber-border max-w-[120px]"
                 />
                 {quantity >= 100 && (
                   <span className="text-xs text-muted-foreground">Uses bulk server processing</span>
@@ -351,7 +370,7 @@ const RuneBox = () => {
               </Button>
             </div>
 
-            {/* Drop Rates */}
+            {/* Drop Rates (baseline; ไม่รวม luckMult แบบไดนามิก) */}
             <div className="mt-6">
               <h3 className="text-sm font-bold mb-3 neon-text-cyan">Drop Rates & Effects</h3>
               <div className="space-y-2">
@@ -371,6 +390,9 @@ const RuneBox = () => {
                   </div>
                 ))}
               </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                * อัตราที่แสดงเป็นค่า baseline; ระหว่างเปิดกล่องจริงจะได้รับโบนัสจาก Rank: Luck x{rankLuckMult.toFixed(2)}
+              </p>
             </div>
           </CardContent>
         </Card>
