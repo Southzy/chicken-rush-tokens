@@ -4,18 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TokenDisplay } from "@/components/TokenDisplay";
-import { Home, Sparkles, Zap } from "lucide-react";
+import { Home, Sparkles, Zap, Star } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { formatTokenBalance } from "@/lib/utils";
 
 import {
-  BOX_PRICE,
+  BOX_PRICE_BASIC,
+  BOX_PRICE_SPECIAL,
   RUNE_BASE,
   RUNE_SPECIAL,
-  RUNE_DATA_FOR_DISPLAY,
-  rollRuneTwoPhase,
-  getEffectiveDropRate,
+  rollBasicRune,
+  rollSpecialRune,
+  findRuneData,
   getRankData,
   type RuneKey,
   type RuneData,
@@ -32,9 +33,29 @@ type InventoryRecord = Record<string, number> & {
   rune_joke?: number;
 };
 
-// Helper to locate rune by key across both groups
-const findRune = (key: RuneKey) =>
-  (RUNE_BASE.find(r => r.key === key) || RUNE_SPECIAL.find(r => r.key === key)) as RuneData;
+type BoxType = "basic" | "special";
+
+const BOX_META: Record<BoxType, { title: string; icon: JSX.Element; price: number; pool: RuneData[]; desc: string }> = {
+  basic: {
+    title: "Basic Box",
+    icon: <Zap className="w-5 h-5" />,
+    price: BOX_PRICE_BASIC,
+    pool: RUNE_BASE,
+    desc: "Drop only base runes (common pool).",
+  },
+  special: {
+    title: "Special Box",
+    icon: <Star className="w-5 h-5" />,
+    price: BOX_PRICE_SPECIAL,
+    pool: RUNE_SPECIAL,
+    desc: "Drop only special runes (rare + Joke).",
+  },
+};
+
+// Helper to roll by box type
+function rollByBox(box: BoxType): RuneKey {
+  return box === "special" ? rollSpecialRune() : rollBasicRune();
+}
 
 const RuneBox = () => {
   const navigate = useNavigate();
@@ -44,6 +65,9 @@ const RuneBox = () => {
   const [opening, setOpening] = useState(false);
   const [revealedRunes, setRevealedRunes] = useState<any[]>([]);
   const [showResults, setShowResults] = useState<boolean>(true);
+
+  // NEW: box selector
+  const [boxType, setBoxType] = useState<BoxType>("basic");
 
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -87,19 +111,14 @@ const RuneBox = () => {
     }
   };
 
-  // === Rank Luck Multiplier ============
-  // รองรับหลายชื่อฟิลด์ที่อาจใช้อยู่ในโปรเจกต์จริง (เลือกตัวที่พบได้ก่อน)
+  // Rank (optional display – ไม่มีผลกับดรอปในเวอร์ชันนี้)
   const rankKey: UserRank = (
-    profile?.rank ??
-    profile?.current_rank ??
-    profile?.user_rank ??
-    'nova_cadet'
+    profile?.rank ?? profile?.current_rank ?? profile?.user_rank ?? 'nova_cadet'
   ) as UserRank;
-
   const rankData = getRankData(rankKey) ?? getRankData('nova_cadet')!;
   const rankLuckMult = typeof rankData?.luckMult === 'number' ? rankData.luckMult : 1;
 
-  // Stochastic diminishing returns → integer only (0/1)
+  // Diminishing returns: integer-only (0/1)
   const applyDiminishingReturns = (currentCount: number, cap: number | null): number => {
     if (!cap) return 1;
     if (currentCount >= cap) return 0;
@@ -108,10 +127,9 @@ const RuneBox = () => {
     return 1;
   };
 
-  // ใช้สุ่มแบบ 2 เฟส (กลุ่ม → ในกลุ่ม) โดยส่ง rankLuckMult เข้าไป
   const rollRune = (currentInventory: InventoryRecord): { rune: RuneData; actualGain: number } => {
-    const key = rollRuneTwoPhase(rankLuckMult);
-    const rune = findRune(key);
+    const key = rollByBox(boxType);
+    const rune = findRuneData(key)!;
     const currentCount = (currentInventory[key] as number) || 0;
     const actualGain = applyDiminishingReturns(currentCount, rune.cap);
     return { rune, actualGain };
@@ -120,7 +138,9 @@ const RuneBox = () => {
   const openBoxes = async () => {
     if (!profile || !inventory) return;
 
-    const totalPrice = quantity * BOX_PRICE;
+    const pricePerBox = BOX_META[boxType].price;
+    const totalPrice = quantity * pricePerBox;
+
     if (profile.token_balance < totalPrice) {
       toast.error("Not enough tokens!");
       return;
@@ -128,25 +148,25 @@ const RuneBox = () => {
 
     setOpening(true);
 
-    // Path: bulk via Edge Function (ควรใช้ในโปรดักชัน)
+    // Bulk path via Edge Function (ถ้ามี)
     if (quantity >= 100) {
       try {
         const { data, error } = await supabase.functions.invoke('bulk-open-runebox', {
-          body: { quantity, rankLuckMult }, // ✅ ส่งตัวคูณ rank ไปให้ server ใช้สุ่มเหมือนกัน
+          body: { quantity, boxType }, // ✅ ส่ง boxType ให้ server เลือกพูลเอง
         });
         if (error) throw error;
 
         if (showResults) {
           setRevealedRunes(
             data.results.map((r: any) => ({
-              rune: findRune(r.runeKey as RuneKey),
+              rune: findRuneData(r.runeKey as RuneKey)!,
               actualGain: r.actualGain,
               wasCapHit: r.wasCapHit,
             }))
           );
         }
 
-        toast.success(`Opened ${quantity} boxes!${showResults ? " Check your results." : ""}`);
+        toast.success(`Opened ${quantity} ${BOX_META[boxType].title}${quantity > 1 ? 'es' : ''}!`);
         setOpening(false);
         fetchData();
         return;
@@ -157,7 +177,7 @@ const RuneBox = () => {
       }
     }
 
-    // Path: client-side (เดโม่/ของเดิม)
+    // Client path (atomicity น้อยกว่า ควรย้ายไป server)
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ token_balance: profile.token_balance - totalPrice })
@@ -192,7 +212,7 @@ const RuneBox = () => {
       results.push({ rune, actualGain: grant, wasCapHit });
     }
 
-    // Update inventory columns only for rune keys that exist
+    // Update inventory columns for all rune keys
     const inventoryUpdate: Record<string, number> = {};
     [...RUNE_BASE, ...RUNE_SPECIAL].forEach((r) => {
       inventoryUpdate[r.key] = (newInventory[r.key] as number) || 0;
@@ -219,8 +239,8 @@ const RuneBox = () => {
       if (showResults) setRevealedRunes(results);
       setOpening(false);
       fetchData();
-      toast.success(`Opened ${quantity} Rune Box${quantity > 1 ? 'es' : ''}!`);
-    }, 400);
+      toast.success(`Opened ${quantity} ${BOX_META[boxType].title}${quantity > 1 ? 'es' : ''}!`);
+    }, 300);
   };
 
   const closeReveal = () => setRevealedRunes([]);
@@ -243,15 +263,8 @@ const RuneBox = () => {
     );
   }
 
-  const totalCost = quantity * BOX_PRICE;
-
-  const formatRatePct = (effective: number) => {
-    const p = effective * 100;
-    if (p >= 1) return `${p.toFixed(2)}%`;
-    if (p >= 0.1) return `${p.toFixed(3)}%`;
-    if (p >= 0.01) return `${p.toFixed(4)}%`;
-    return "<0.01%";
-  };
+  const pricePerBox = BOX_META[boxType].price;
+  const totalCost = quantity * pricePerBox;
 
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted">
@@ -271,13 +284,34 @@ const RuneBox = () => {
                 Rune Box
               </h1>
               <p className="text-muted-foreground mt-1">Collect powerful runes to enhance your stats!</p>
-              {/* แสดง rank/luck ปัจจุบันแบบเบาๆ (optional) */}
               <p className="text-xs text-muted-foreground mt-1">
-                Rank: <span className="font-semibold">{rankData.name}</span> · Luck x{rankLuckMult.toFixed(2)}
+                Rank: <span className="font-semibold">{(getRankData(profile?.rank as UserRank)?.name) ?? "Unknown"}</span> · Luck x{(getRankData(profile?.rank as UserRank)?.luckMult ?? 1).toFixed(2)}
               </p>
             </div>
           </div>
           <TokenDisplay balance={profile.token_balance} />
+        </div>
+
+        {/* Box Selector */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {(Object.keys(BOX_META) as BoxType[]).map(type => (
+            <button
+              key={type}
+              onClick={() => setBoxType(type)}
+              className={`glass-panel border rounded-xl p-4 text-left transition hover:scale-[1.01] ${
+                boxType === type ? 'ring-2 ring-purple-500' : ''
+              }`}
+            >
+              <div className="flex items-center gap-2 font-semibold">
+                {BOX_META[type].icon}
+                {BOX_META[type].title}
+              </div>
+              <div className="text-sm text-muted-foreground mt-1">{BOX_META[type].desc}</div>
+              <div className="text-sm mt-2">
+                Price: <span className="neon-text-gold font-bold">{BOX_META[type].price}</span> tokens
+              </div>
+            </button>
+          ))}
         </div>
 
         {/* Inventory */}
@@ -317,14 +351,14 @@ const RuneBox = () => {
           <CardHeader>
             <CardTitle className="neon-text-purple flex items-center gap-2">
               <Sparkles className="w-5 h-5" />
-              Open Rune Boxes
+              Open {BOX_META[boxType].title}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="text-center py-8">
-              <div className="text-6xl mb-4">📦</div>
-              <div className="text-2xl font-bold neon-text-cyan mb-2">Rune Box</div>
-              <div className="text-lg neon-text-gold">{BOX_PRICE} tokens per box</div>
+            <div className="text-center py-6">
+              <div className="text-6xl mb-4">{boxType === "special" ? "💎" : "📦"}</div>
+              <div className="text-2xl font-bold neon-text-cyan mb-2">{BOX_META[boxType].title}</div>
+              <div className="text-lg neon-text-gold">{BOX_META[boxType].price} tokens per box</div>
             </div>
 
             <div className="space-y-3">
@@ -359,22 +393,22 @@ const RuneBox = () => {
                 {opening ? (
                   <>
                     <Sparkles className="w-5 h-5 mr-2 animate-spin" />
-                    Opening {quantity} Box{quantity > 1 ? 'es' : ''}...
+                    Opening {quantity} {BOX_META[boxType].title}{quantity > 1 ? 'es' : ''}...
                   </>
                 ) : (
                   <>
                     <Zap className="w-5 h-5 mr-2" />
-                    Open {quantity} Box{quantity > 1 ? 'es' : ''}
+                    Open {quantity} {BOX_META[boxType].title}{quantity > 1 ? 'es' : ''}
                   </>
                 )}
               </Button>
             </div>
 
-            {/* Drop Rates (baseline; ไม่รวม luckMult แบบไดนามิก) */}
+            {/* Drop Rates for this box */}
             <div className="mt-6">
-              <h3 className="text-sm font-bold mb-3 neon-text-cyan">Drop Rates & Effects</h3>
+              <h3 className="text-sm font-bold mb-3 neon-text-cyan">Drop Rates & Effects — {BOX_META[boxType].title}</h3>
               <div className="space-y-2">
-                {RUNE_DATA_FOR_DISPLAY.map((rune) => (
+                {BOX_META[boxType].pool.map((rune) => (
                   <div key={rune.key} className="flex justify-between items-center text-xs p-2 glass-panel rounded">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">{rune.symbol}</span>
@@ -382,22 +416,19 @@ const RuneBox = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-muted-foreground">{rune.effect}</span>
-                      <span className="neon-text-purple font-bold">
-                        {formatRatePct(getEffectiveDropRate(rune.key))}
-                      </span>
+                      {/* in-pool rate (normalized to 100% within this box) */}
+                      <span className="neon-text-purple font-bold">{(rune.dropRate * 100).toFixed(3)}%</span>
                       {rune.cap && <span className="text-xs text-yellow-500">Cap: {rune.cap}</span>}
                     </div>
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-muted-foreground mt-2">
-                * อัตราที่แสดงเป็นค่า baseline; ระหว่างเปิดกล่องจริงจะได้รับโบนัสจาก Rank: Luck x{rankLuckMult.toFixed(2)}
-              </p>
             </div>
           </CardContent>
         </Card>
       </div>
 
+      {/* Reveal Modal */}
       {showResults && revealedRunes.length > 0 && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
           <Card className="glass-panel cyber-border max-w-2xl w-full max-h-[80vh] overflow-y-auto">
@@ -442,11 +473,3 @@ const RuneBox = () => {
 };
 
 export default RuneBox;
-
-function formatRatePct(effective: number) {
-  const p = effective * 100;
-  if (p >= 1) return `${p.toFixed(2)}%`;
-  if (p >= 0.1) return `${p.toFixed(3)}%`;
-  if (p >= 0.01) return `${p.toFixed(4)}%`;
-  return "<0.01%";
-}
