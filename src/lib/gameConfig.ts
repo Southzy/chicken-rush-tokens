@@ -1,6 +1,5 @@
 // src/lib/gameConfig.ts
-// Centralized Game Configuration — two-phase drop model (easier rates)
-// ✅ Increased special group chance from 1.91% → 3.00%
+// Centralized Game Configuration — two-phase drop model (+ dev debug boosts)
 
 export type RuneKey =
   | 'rune_a' | 'rune_b' | 'rune_c' | 'rune_d' | 'rune_e' | 'rune_f'
@@ -16,7 +15,7 @@ export interface RuneData {
   key: RuneKey;
   name: string;
   symbol: string;
-  effect: string;    // human-readable; do actual math in effectRegistry.ts
+  effect: string;    // human-readable; do the actual math in effectRegistry.ts
   dropRate: number;  // in-group rate (sums to 1.0 inside its group)
   cap: number | null;
   color: string;     // Tailwind gradient utilities
@@ -44,7 +43,7 @@ export const BOX_PRICE = 1000;
 export const MAX_TOKEN_BALANCE = 1_000_000_000_000; // 1e12
 export const MAX_SHARD_BALANCE = 1_000_000_000_000; // 1e12
 
-// Exchange rates for The Joke Rune (fixed to match comments)
+// Exchange rates for The Joke Rune (match comments)
 export const EXCHANGE_RATES: ExchangeRate = {
   jokeRuneToTokens: 100_000, // 1 Joke Rune = 100k tokens
   jokeRuneToShards: 10,      // 1 Joke Rune = 10 shards
@@ -56,30 +55,43 @@ export const EXCHANGE_RATES: ExchangeRate = {
 // =========================
 export type RuneGroup = 'base' | 'special';
 
-// ✅ Easier: bump special group quota from 0.0191 → 0.03
-export const GROUP_WEIGHTS = {
-  base: 0.97,     // 97.00%
-  special: 0.03,  // 3.00%  (↑ easier to get rare runes)
+// DEFAULT weights (prod)
+const DEFAULT_GROUP_WEIGHTS = {
+  base: 0.97,
+  special: 0.03,
 } as const;
+
+// Dev flag to boost chance (for staging/debug only)
+const DROP_DEBUG = typeof import.meta !== 'undefined'
+  && (import.meta as any).env
+  && (import.meta as any).env.VITE_DROP_DEBUG === '1';
+
+// Effective group weights (debug → special 10%)
+export const GROUP_WEIGHTS = DROP_DEBUG ? {
+  base: 0.90,
+  special: 0.10,
+} as const : DEFAULT_GROUP_WEIGHTS;
 
 // ----- Base runes (original 6) — raw weights (normalized within group) -----
 type BaseRow = Omit<RuneData, 'dropRate'> & { dropRate: number };
 
-const BASE_RUNES_RAW: (BaseRow & { group?: RuneGroup })[] = [
+const BASE_RUNES_RAW: BaseRow[] = [
   { key:'rune_a', name:'Aether Rune',  symbol:'✨', effect:'+0.001 Luck',                         dropRate:0.30,  cap:500,  color:'from-cyan-500 to-blue-500' },
   { key:'rune_b', name:'Blaze Rune',   symbol:'🔥', effect:'+0.004 Money Multiplier',             dropRate:0.22,  cap:300,  color:'from-orange-500 to-red-500' },
   { key:'rune_c', name:'Chrono Rune',  symbol:'⏰', effect:'+0.0005 Luck & +0.001 Money',         dropRate:0.18,  cap:400,  color:'from-purple-500 to-pink-500' },
   { key:'rune_d', name:'Dusk Rune',    symbol:'🌙', effect:'+0.25% Emoji Luck bonus',             dropRate:0.12,  cap:200,  color:'from-indigo-500 to-purple-500' },
   { key:'rune_e', name:'Ember Rune',   symbol:'💎', effect:'+0.25% Emoji Money bonus',            dropRate:0.12,  cap:200,  color:'from-yellow-500 to-orange-500' },
-  // Tailwind: 'from-gold' is not standard → use from-amber-400
   { key:'rune_f', name:'Fate Rune',    symbol:'⭐', effect:'+1 Rank Shard',                       dropRate:0.06,  cap:null, color:'from-amber-400 to-yellow-500' },
 ];
 
 // ----- Special runes (7 + Joke) — raw weights (normalized within group) -----
-const SPECIAL_RUNES_RAW: (BaseRow & { group?: RuneGroup })[] = [
+// DEV: give rune_i (Void) extra weight x3 when VITE_DROP_DEBUG='1' so it obviously appears
+const VOID_WEIGHT = 0.003 * (DROP_DEBUG ? 3 : 1);
+
+const SPECIAL_RUNES_RAW: BaseRow[] = [
   { key:'rune_g', name:'Shadow Rune',   symbol:'🌑', effect:'+0.01 Critical Chance',    dropRate:0.005,  cap:100, color:'from-gray-900 to-gray-700' },
   { key:'rune_h', name:'Phoenix Rune',  symbol:'🔆', effect:'+0.015 Revival Bonus',     dropRate:0.004,  cap:80,  color:'from-red-600 to-orange-400' },
-  { key:'rune_i', name:'Void Rune',     symbol:'🕳️', effect:'+0.02 Void Power',        dropRate:0.003,  cap:60,  color:'from-purple-900 to-black' },
+  { key:'rune_i', name:'Void Rune',     symbol:'🕳️', effect:'+0.02 Void Power',        dropRate:VOID_WEIGHT, cap:60,  color:'from-purple-900 to-black' },
   { key:'rune_j', name:'Storm Rune',    symbol:'⚡', effect:'+0.025 Lightning Strike',  dropRate:0.0025, cap:50,  color:'from-blue-400 to-cyan-300' },
   { key:'rune_k', name:'Prism Rune',    symbol:'🌈', effect:'+0.03 Rainbow Luck',       dropRate:0.002,  cap:40,  color:'from-pink-400 via-purple-400 to-blue-400' },
   { key:'rune_l', name:'Omega Rune',    symbol:'⚛️', effect:'+0.04 Quantum Flux',      dropRate:0.0015, cap:30,  color:'from-indigo-600 to-purple-800' },
