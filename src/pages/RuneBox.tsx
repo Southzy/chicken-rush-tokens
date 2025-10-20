@@ -148,11 +148,11 @@ const RuneBox = () => {
 
     setOpening(true);
 
-    // Bulk path via Edge Function (ถ้ามี)
-    if (quantity >= 100) {
+    // ✅ Bulk path via Edge Function (>= 10 ให้ตรงกับฝั่ง server)
+    if (quantity >= 10) {
       try {
         const { data, error } = await supabase.functions.invoke('bulk-open-runebox', {
-          body: { quantity, boxType }, // ✅ ส่ง boxType ให้ server เลือกพูลเอง
+          body: { quantity, boxType }, // ส่ง boxType ให้ server เลือกพูลเอง
         });
         if (error) throw error;
 
@@ -372,7 +372,7 @@ const RuneBox = () => {
                   onChange={(e) => setQuantity(Math.max(1, Math.min(10000, parseInt(e.target.value) || 1)))}
                   className="cyber-border max-w-[120px]"
                 />
-                {quantity >= 100 && (
+                {quantity >= 10 && (
                   <span className="text-xs text-muted-foreground">Uses bulk server processing</span>
                 )}
                 <span className="text-sm text-muted-foreground">
