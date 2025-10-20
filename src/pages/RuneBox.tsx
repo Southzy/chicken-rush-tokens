@@ -9,33 +9,32 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { formatTokenBalance } from "@/lib/utils";
 import { RUNE_DATA, BOX_PRICE, RuneData } from "@/lib/gameConfig";
-// ⬇️ เพิ่มสวิตช์
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 
 const STORAGE_KEY = "runeBox.showResults";
 
+type InventoryRecord = Record<string, number> & {
+  user_id?: string;
+  rune_joke?: number;
+};
+
 const RuneBox = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
-  const [inventory, setInventory] = useState<any>(null);
+  const [inventory, setInventory] = useState<InventoryRecord | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [opening, setOpening] = useState(false);
   const [revealedRunes, setRevealedRunes] = useState<any[]>([]);
-  // ⬇️ toggle แสดง/ซ่อนผลลัพธ์
   const [showResults, setShowResults] = useState<boolean>(true);
 
   useEffect(() => {
-    // โหลดค่าที่เคยเลือกไว้
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved !== null) {
-      setShowResults(saved === "true");
-    }
+    if (saved !== null) setShowResults(saved === "true");
     fetchData();
   }, []);
 
   useEffect(() => {
-    // บันทึกค่าทุกครั้งที่เปลี่ยน
     localStorage.setItem(STORAGE_KEY, String(showResults));
   }, [showResults]);
 
@@ -51,7 +50,6 @@ const RuneBox = () => {
       .select("*")
       .eq("id", user.id)
       .single();
-
     if (profileData) setProfile(profileData);
 
     const { data: inventoryData } = await supabase
@@ -61,40 +59,59 @@ const RuneBox = () => {
       .single();
 
     if (inventoryData) {
-      setInventory(inventoryData);
+      setInventory(inventoryData as InventoryRecord);
     } else {
       const { data: newInventory } = await supabase
         .from("user_inventory")
         .insert({ user_id: user.id })
         .select()
         .single();
-      if (newInventory) setInventory(newInventory);
+      if (newInventory) setInventory(newInventory as InventoryRecord);
     }
   };
 
-  const applyDiminishingReturns = (currentCount: number, cap: number | null, gains: number): number => {
-    if (!cap) return gains;
-    const nearCapThreshold = cap * 0.9;
+  /**
+   * Stochastic diminishing returns (จำนวนเต็มเท่านั้น)
+   * - ถ้าไม่มี cap → ได้ 1 ชิ้นตามปกติ
+   * - ถ้าแตะ cap → ได้ 0
+   * - ถ้า ≥ 90% ของ cap → มีโอกาส 50% ได้ 1, ไม่งั้น 0 (ลดความเร็วการสะสม)
+   * หมายเหตุ: ป้องกันค่าทศนิยมลง DB
+   */
+  const applyDiminishingReturns = (
+    currentCount: number,
+    cap: number | null
+  ): number => {
+    if (!cap) return 1;
     if (currentCount >= cap) return 0;
-    if (currentCount >= nearCapThreshold) {
-      return gains * 0.5;
+    const ratio = currentCount / cap;
+    if (ratio >= 0.9) {
+      return Math.random() < 0.5 ? 1 : 0;
     }
-    return gains;
+    return 1;
   };
 
-  const rollRune = (currentInventory: any): { rune: RuneData; actualGain: number } => {
+  /**
+   * สุ่มรูนจาก RUNE_DATA (อัตราดรอปถูก normalize แล้วให้รวม = 1)
+   * - กัน floating drift: ถ้าลูปไม่เจอ (กรณี roll > cumulative) → คืนตัวสุดท้าย
+   */
+  const rollRune = (currentInventory: InventoryRecord): { rune: RuneData; actualGain: number } => {
     const roll = Math.random();
     let cumulativeRate = 0;
 
-    for (const rune of RUNE_DATA) {
+    for (let idx = 0; idx < RUNE_DATA.length; idx++) {
+      const rune = RUNE_DATA[idx];
       cumulativeRate += rune.dropRate;
       if (roll <= cumulativeRate) {
-        const currentCount = currentInventory[rune.key] || 0;
-        const actualGain = applyDiminishingReturns(currentCount, rune.cap, 1);
+        const currentCount = (currentInventory[rune.key] as number) || 0;
+        const actualGain = applyDiminishingReturns(currentCount, rune.cap);
         return { rune, actualGain };
       }
     }
-    return { rune: RUNE_DATA[0], actualGain: 1 };
+    // fallback: คืนตัวสุดท้าย (หายากสุด) เพื่อคุม deterministic
+    const last = RUNE_DATA[RUNE_DATA.length - 1];
+    const currentCount = (currentInventory[last.key] as number) || 0;
+    const actualGain = applyDiminishingReturns(currentCount, last.cap);
+    return { rune: last, actualGain };
   };
 
   const openBoxes = async () => {
@@ -108,7 +125,7 @@ const RuneBox = () => {
 
     setOpening(true);
 
-    // ใช้ bulk เมื่อจำนวนมาก
+    // ใช้ bulk function เมื่อจำนวนมาก (ควรทำ token deduct + เขียนผลแบบอะตอมมิกฝั่ง server)
     if (quantity >= 100) {
       try {
         const { data, error } = await supabase.functions.invoke('bulk-open-runebox', {
@@ -116,7 +133,6 @@ const RuneBox = () => {
         });
         if (error) throw error;
 
-        // ⬇️ ตั้งค่าเฉพาะเมื่อเปิดแสดงผล
         if (showResults) {
           setRevealedRunes(
             data.results.map((r: any) => ({
@@ -138,7 +154,8 @@ const RuneBox = () => {
       }
     }
 
-    // หัก token
+    // ⚠️ โหมด client: มี race condition หาก inventory update fail หลังหัก token
+    // แนะนำ: สร้าง edge function 'open-runebox' สำหรับกรณี <100 ให้ฝั่ง server ทำธุรกรรมครบชุด
     const { error: updateError } = await supabase
       .from("profiles")
       .update({ token_balance: profile.token_balance - totalPrice })
@@ -150,29 +167,35 @@ const RuneBox = () => {
       return;
     }
 
-    // สุ่มผล
+    // สุ่มผลแบบ client
     const results: any[] = [];
-    const newInventory = { ...inventory };
+    const newInventory: InventoryRecord = { ...inventory };
     let totalShards = 0;
 
     for (let i = 0; i < quantity; i++) {
       const { rune, actualGain } = rollRune(newInventory);
 
-      if (rune.key === 'rune_f') {
-        totalShards += actualGain;
-      } else if (rune.key === 'rune_joke') {
-        newInventory.rune_joke = (newInventory.rune_joke || 0) + actualGain;
-      } else {
-        newInventory[rune.key] = (newInventory[rune.key] || 0) + actualGain;
+      // เก็บเฉพาะจำนวนเต็มเท่านั้น
+      const grant = Math.max(0, Math.floor(actualGain));
+      if (grant > 0) {
+        if (rune.key === 'rune_f') {
+          totalShards += grant;
+        } else {
+          newInventory[rune.key] = ((newInventory[rune.key] as number) || 0) + grant;
+        }
       }
 
-      results.push({ rune, actualGain, wasCapHit: actualGain === 0 });
+      const cap = rune.cap ?? Infinity;
+      const currentAfter = (newInventory[rune.key] as number) || 0;
+      const wasCapHit = cap !== Infinity && currentAfter >= cap;
+
+      results.push({ rune, actualGain: grant, wasCapHit });
     }
 
-    // อัปเดต inventory
-    const inventoryUpdate: any = {};
-    RUNE_DATA.forEach(rune => {
-      inventoryUpdate[rune.key] = newInventory[rune.key] || 0;
+    // อัปเดต inventory—อ้างอิงเฉพาะคอลัมน์รูนที่มีใน schema
+    const inventoryUpdate: Record<string, number> = {};
+    RUNE_DATA.forEach((rune) => {
+      inventoryUpdate[rune.key] = (newInventory[rune.key] as number) || 0;
     });
 
     const { error: invError } = await supabase
@@ -182,13 +205,14 @@ const RuneBox = () => {
 
     if (invError) {
       console.error("Failed to update inventory:", invError);
+      // ไม่ rollback token ที่หักไปแล้ว (เหตุผลด้านเดโม) — ย้ายไปทำฝั่ง server จะแก้ปัญหานี้ได้
     }
 
-    // อัปเดต shards
+    // อัปเดต shards (จำนวนเต็ม)
     if (totalShards > 0) {
       const { error: shardError } = await supabase
         .from("profiles")
-        .update({ rank_shards: profile.rank_shards + totalShards })
+        .update({ rank_shards: (profile.rank_shards || 0) + totalShards })
         .eq("id", profile.id);
 
       if (shardError) {
@@ -197,28 +221,23 @@ const RuneBox = () => {
     }
 
     setTimeout(() => {
-      // ⬇️ ตั้งค่าผลลัพธ์เฉพาะเมื่อเปิดแสดงผล
-      if (showResults) {
-        setRevealedRunes(results);
-      }
+      if (showResults) setRevealedRunes(results);
       setOpening(false);
       fetchData();
       toast.success(`Opened ${quantity} Rune Box${quantity > 1 ? 'es' : ''}!`);
-    }, 2000);
+    }, 400); // เร่ง feedback ให้ไวขึ้นได้
   };
 
-  const closeReveal = () => {
-    setRevealedRunes([]);
-  };
+  const closeReveal = () => setRevealedRunes([]);
 
   const getCapStatus = (runeKey: string, cap: number | null) => {
     if (!cap || !inventory) return null;
-    const current = inventory[runeKey] || 0;
+    const current = (inventory[runeKey] as number) || 0;
     const percentage = (current / cap) * 100;
 
     if (percentage >= 100) return { color: 'text-red-500', text: 'CAPPED' };
     if (percentage >= 90) return { color: 'text-yellow-500', text: `${percentage.toFixed(0)}% (Diminished)` };
-    return { color: 'text-green-500', text: `${percentage.toFixed(0)}%` };
+    return { color: 'text-green-500', text: `${Math.max(0, Math.floor(percentage))}%` };
   };
 
   if (!profile || !inventory) {
@@ -231,6 +250,15 @@ const RuneBox = () => {
 
   const totalCost = quantity * BOX_PRICE;
 
+  // แสดงเปอร์เซ็นต์แบบอ่านง่ายสำหรับรูนหายากมาก
+  const formatRatePct = (rate: number) => {
+    const p = rate * 100;
+    if (p >= 1) return `${p.toFixed(2)}%`;
+    if (p >= 0.1) return `${p.toFixed(2)}%`;
+    if (p >= 0.01) return `${p.toFixed(3)}%`;
+    return "<0.01%";
+  };
+
   return (
     <div className="min-h-screen p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-background via-background to-muted">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(138,43,226,0.1),transparent_50%)]" />
@@ -239,11 +267,7 @@ const RuneBox = () => {
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full md:w-auto">
-            <Button
-              onClick={() => navigate("/")}
-              variant="outline"
-              className="cyber-border shrink-0"
-            >
+            <Button onClick={() => navigate("/")} variant="outline" className="cyber-border shrink-0">
               <Home className="w-4 h-4 mr-2" />
               Dashboard
             </Button>
@@ -266,27 +290,26 @@ const RuneBox = () => {
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
               {RUNE_DATA.map((rune) => {
-                const count = inventory[rune.key] || 0;
+                const count = (inventory[rune.key] as number) || 0;
                 const capStatus = getCapStatus(rune.key, rune.cap);
-
                 return (
                   <div key={rune.key} className={`glass-panel p-3 rounded-lg border bg-gradient-to-br ${rune.color} bg-opacity-10`}>
                     <div className="text-3xl text-center mb-1">{rune.symbol}</div>
                     <div className="text-xs text-center font-bold">{rune.name}</div>
                     <div className="text-lg text-center neon-text-gold font-bold mt-1">
-                      {formatTokenBalance(count, 0)}
+                      {formatTokenBalance(Math.floor(count), 0)}
                     </div>
                     {capStatus && (
-                      <div className={`text-xs text-center mt-1 ${capStatus.color}`}>
-                        {capStatus.text}
-                      </div>
+                      <div className={`text-xs text-center mt-1 ${capStatus.color}`}>{capStatus.text}</div>
                     )}
                   </div>
                 );
               })}
             </div>
             <div className="mt-4 p-3 glass-panel rounded-lg">
-              <div className="text-sm text-muted-foreground">Rank Shards: <span className="neon-text-gold font-bold">{profile.rank_shards}</span></div>
+              <div className="text-sm text-muted-foreground">
+                Rank Shards: <span className="neon-text-gold font-bold">{formatTokenBalance(profile.rank_shards ?? 0, 0)}</span>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -320,15 +343,15 @@ const RuneBox = () => {
                 {quantity >= 100 && (
                   <span className="text-xs text-muted-foreground">Uses bulk server processing</span>
                 )}
-                <span className="text-sm text-muted-foreground">Total: <span className="neon-text-gold font-bold">{formatTokenBalance(totalCost)} tokens</span></span>
+                <span className="text-sm text-muted-foreground">
+                  Total: <span className="neon-text-gold font-bold">{formatTokenBalance(totalCost)} tokens</span>
+                </span>
               </div>
 
-              {/* ⬇️ Toggle แสดง/ซ่อนผลลัพธ์ */}
+              {/* Toggle แสดง/ซ่อนผลลัพธ์ */}
               <div className="flex items-center gap-3">
                 <Switch id="show-results" checked={showResults} onCheckedChange={setShowResults} />
-                <Label htmlFor="show-results" className="cursor-pointer">
-                  Show results modal
-                </Label>
+                <Label htmlFor="show-results" className="cursor-pointer">Show results modal</Label>
               </div>
 
               <Button
@@ -362,7 +385,7 @@ const RuneBox = () => {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="text-muted-foreground">{rune.effect}</span>
-                      <span className="neon-text-purple font-bold">{(rune.dropRate * 100).toFixed(0)}%</span>
+                      <span className="neon-text-purple font-bold">{formatRatePct(rune.dropRate)}</span>
                       {rune.cap && <span className="text-xs text-yellow-500">Cap: {rune.cap}</span>}
                     </div>
                   </div>
@@ -398,18 +421,15 @@ const RuneBox = () => {
                   <div className="text-right">
                     {result.wasCapHit ? (
                       <div className="text-red-500 font-bold">CAP REACHED</div>
-                    ) : result.actualGain < 1 ? (
-                      <div className="text-yellow-500 font-bold">+{result.actualGain.toFixed(2)} (Diminished)</div>
+                    ) : result.actualGain === 0 ? (
+                      <div className="text-yellow-500 font-bold">Diminished</div>
                     ) : (
                       <div className="neon-text-gold font-bold text-xl">+{result.actualGain}</div>
                     )}
                   </div>
                 </div>
               ))}
-              <Button
-                className="w-full cyber-border mt-4"
-                onClick={closeReveal}
-              >
+              <Button className="w-full cyber-border mt-4" onClick={closeReveal}>
                 Awesome!
               </Button>
             </CardContent>
