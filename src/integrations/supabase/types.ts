@@ -7,8 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
@@ -46,30 +44,30 @@ export type Database = {
       }
       game_history: {
         Row: {
-          bet_amount: number
+          bet_amount: string            // NUMERIC(38,0)
           created_at: string
           difficulty: string
           id: string
-          multiplier: number
-          profit: number
+          multiplier: string            // DECIMAL -> string
+          profit: string                // NUMERIC(38,0)
           user_id: string
         }
         Insert: {
-          bet_amount: number
+          bet_amount: string
           created_at?: string
           difficulty?: string
           id?: string
-          multiplier: number
-          profit: number
+          multiplier: string
+          profit: string
           user_id: string
         }
         Update: {
-          bet_amount?: number
+          bet_amount?: string
           created_at?: string
           difficulty?: string
           id?: string
-          multiplier?: number
-          profit?: number
+          multiplier?: string
+          profit?: string
           user_id?: string
         }
         Relationships: [
@@ -91,7 +89,7 @@ export type Database = {
       }
       game_sessions: {
         Row: {
-          bet_amount: number
+          bet_amount: string            // NUMERIC(38,0)
           client_seed: string
           created_at: string
           game_id: string
@@ -107,7 +105,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          bet_amount: number
+          bet_amount: string
           client_seed: string
           created_at?: string
           game_id: string
@@ -123,7 +121,7 @@ export type Database = {
           user_id: string
         }
         Update: {
-          bet_amount?: number
+          bet_amount?: string
           client_seed?: string
           created_at?: string
           game_id?: string
@@ -146,15 +144,15 @@ export type Database = {
           emoji_pool_size: number
           id: string
           name: string
-          price: number
-          secret_chance: number
+          price: string                 // เงิน -> NUMERIC => string
+          secret_chance: number         // ถ้าใช้ DECIMAL ให้เปลี่ยนเป็น string ด้วย
         }
         Insert: {
           created_at?: string
           emoji_pool_size?: number
           id?: string
           name: string
-          price: number
+          price: string
           secret_chance: number
         }
         Update: {
@@ -162,7 +160,7 @@ export type Database = {
           emoji_pool_size?: number
           id?: string
           name?: string
-          price?: number
+          price?: string
           secret_chance?: number
         }
         Relationships: []
@@ -172,8 +170,8 @@ export type Database = {
           created_at: string
           id: string
           rank: Database["public"]["Enums"]["user_rank"]
-          rank_shards: number
-          token_balance: number
+          rank_shards: number           // ถ้าใน DB เป็น NUMERIC ให้เปลี่ยนเป็น string
+          token_balance: string         // NUMERIC(38,0)
           updated_at: string
           username: string
         }
@@ -181,8 +179,8 @@ export type Database = {
           created_at?: string
           id: string
           rank?: Database["public"]["Enums"]["user_rank"]
-          rank_shards?: number
-          token_balance?: number
+          rank_shards?: number          // ถ้าใน DB เป็น NUMERIC ให้เปลี่ยนเป็น string
+          token_balance?: string
           updated_at?: string
           username: string
         }
@@ -190,8 +188,8 @@ export type Database = {
           created_at?: string
           id?: string
           rank?: Database["public"]["Enums"]["user_rank"]
-          rank_shards?: number
-          token_balance?: number
+          rank_shards?: number          // ถ้าใน DB เป็น NUMERIC ให้เปลี่ยนเป็น string
+          token_balance?: string
           updated_at?: string
           username?: string
         }
@@ -233,60 +231,60 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          rune_a: number
-          rune_b: number
-          rune_c: number
-          rune_d: number
-          rune_e: number
-          rune_f: number
-          rune_g: number
-          rune_h: number
-          rune_i: number
-          rune_j: number
-          rune_joke: number
-          rune_k: number
-          rune_l: number
-          rune_m: number
+          rune_a: string                // NUMERIC(38,0)
+          rune_b: string
+          rune_c: string
+          rune_d: string
+          rune_e: string
+          rune_f: string
+          rune_g: string
+          rune_h: string
+          rune_i: string
+          rune_j: string
+          rune_joke: string
+          rune_k: string
+          rune_l: string
+          rune_m: string
           updated_at: string
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
-          rune_a?: number
-          rune_b?: number
-          rune_c?: number
-          rune_d?: number
-          rune_e?: number
-          rune_f?: number
-          rune_g?: number
-          rune_h?: number
-          rune_i?: number
-          rune_j?: number
-          rune_joke?: number
-          rune_k?: number
-          rune_l?: number
-          rune_m?: number
+          rune_a?: string
+          rune_b?: string
+          rune_c?: string
+          rune_d?: string
+          rune_e?: string
+          rune_f?: string
+          rune_g?: string
+          rune_h?: string
+          rune_i?: string
+          rune_j?: string
+          rune_joke?: string
+          rune_k?: string
+          rune_l?: string
+          rune_m?: string
           updated_at?: string
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
-          rune_a?: number
-          rune_b?: number
-          rune_c?: number
-          rune_d?: number
-          rune_e?: number
-          rune_f?: number
-          rune_g?: number
-          rune_h?: number
-          rune_i?: number
-          rune_j?: number
-          rune_joke?: number
-          rune_k?: number
-          rune_l?: number
-          rune_m?: number
+          rune_a?: string
+          rune_b?: string
+          rune_c?: string
+          rune_d?: string
+          rune_e?: string
+          rune_f?: string
+          rune_g?: string
+          rune_h?: string
+          rune_i?: string
+          rune_j?: string
+          rune_joke?: string
+          rune_k?: string
+          rune_l?: string
+          rune_m?: string
           updated_at?: string
           user_id?: string
         }
@@ -337,24 +335,24 @@ export type Database = {
           money_score: number | null
           power_score: number | null
           rank: Database["public"]["Enums"]["user_rank"] | null
-          rank_shards: number | null
-          rune_a: number | null
-          rune_b: number | null
-          rune_c: number | null
-          rune_d: number | null
-          rune_e: number | null
-          rune_f: number | null
-          rune_g: number | null
-          rune_h: number | null
-          rune_i: number | null
-          rune_j: number | null
-          rune_joke: number | null
-          rune_k: number | null
-          rune_l: number | null
-          rune_luck: number | null
-          rune_m: number | null
-          rune_money: number | null
-          token_balance: number | null
+          rank_shards: number | null                 // ถ้า DB เป็น NUMERIC -> string | null
+          rune_a: string | null                      // NUMERIC -> string|null
+          rune_b: string | null
+          rune_c: string | null
+          rune_d: string | null
+          rune_e: string | null
+          rune_f: string | null
+          rune_g: string | null
+          rune_h: string | null
+          rune_i: string | null
+          rune_j: string | null
+          rune_joke: string | null
+          rune_k: string | null
+          rune_l: string | null
+          rune_luck: string | null                   // ถ้ามาจาก NUMERIC
+          rune_m: string | null
+          rune_money: string | null                  // ถ้ามาจาก NUMERIC
+          token_balance: string | null               // NUMERIC -> string|null
           username: string | null
         }
         Relationships: []
@@ -396,7 +394,6 @@ export type Database = {
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
 type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
