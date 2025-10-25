@@ -83,7 +83,7 @@ const Game = () => {
     }
 
     // 30% chance to hit a trap
-    const hitTrap = Math.random() < 0.3;
+    const hitTrap = Math.random() < 0.01;
 
     if (hitTrap) {
       setGameResult("lose");
