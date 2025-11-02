@@ -28,9 +28,13 @@ import { Label } from "@/components/ui/label";
 
 const STORAGE_KEY = "runeBox.showResults";
 
-type InventoryRecord = Record<string, number> & {
+type InventoryRecord = {
+  [key: string]: number | string | undefined;
   user_id?: string;
   rune_joke?: number;
+  created_at?: string;
+  id?: string;
+  updated_at?: string;
 };
 
 type BoxType = "basic" | "special";
@@ -97,14 +101,37 @@ const RuneBox = () => {
       .single();
 
     if (inventoryData) {
-      setInventory(inventoryData as InventoryRecord);
+      // Convert string values to numbers for inventory
+      const convertedInventory: InventoryRecord = {
+        created_at: inventoryData.created_at,
+        id: inventoryData.id,
+        user_id: inventoryData.user_id,
+        updated_at: inventoryData.updated_at,
+      };
+      [...RUNE_BASE, ...RUNE_SPECIAL].forEach((rune) => {
+        const val = inventoryData[rune.key];
+        convertedInventory[rune.key] = typeof val === 'string' ? parseInt(val) : (val || 0);
+      });
+      setInventory(convertedInventory);
     } else {
       const { data: newInventory } = await supabase
         .from("user_inventory")
         .insert({ user_id: user.id })
         .select()
         .single();
-      if (newInventory) setInventory(newInventory as InventoryRecord);
+      if (newInventory) {
+        const convertedInventory: InventoryRecord = {
+          created_at: newInventory.created_at,
+          id: newInventory.id,
+          user_id: newInventory.user_id,
+          updated_at: newInventory.updated_at,
+        };
+        [...RUNE_BASE, ...RUNE_SPECIAL].forEach((rune) => {
+          const val = newInventory[rune.key];
+          convertedInventory[rune.key] = typeof val === 'string' ? parseInt(val) : (val || 0);
+        });
+        setInventory(convertedInventory);
+      }
     }
   };
 
@@ -135,8 +162,9 @@ const RuneBox = () => {
 
     const pricePerBox = BOX_META[boxType].price;
     const totalPrice = quantity * pricePerBox;
+    const currentBalance = typeof profile.token_balance === 'string' ? parseInt(profile.token_balance) : profile.token_balance;
 
-    if (profile.token_balance < totalPrice) {
+    if (currentBalance < totalPrice) {
       toast.error("Not enough tokens!");
       return;
     }
@@ -175,7 +203,7 @@ const RuneBox = () => {
     // Client path (< 10)
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ token_balance: profile.token_balance - totalPrice })
+      .update({ token_balance: (currentBalance - totalPrice).toString() })
       .eq("id", profile.id);
 
     if (updateError) {
@@ -208,9 +236,10 @@ const RuneBox = () => {
     }
 
     // Update inventory columns for all rune keys
-    const inventoryUpdate: Record<string, number> = {};
+    const inventoryUpdate: Record<string, string> = {};
     [...RUNE_BASE, ...RUNE_SPECIAL].forEach((r) => {
-      inventoryUpdate[r.key] = (newInventory[r.key] as number) || 0;
+      const val = (newInventory[r.key] as number) || 0;
+      inventoryUpdate[r.key] = val.toString();
     });
 
     const { error: invError } = await supabase

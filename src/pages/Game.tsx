@@ -52,7 +52,9 @@ const Game = () => {
   };
 
   const startGame = async () => {
-    if (!profile || betAmount > profile.token_balance) {
+    const currentBalance = typeof profile.token_balance === 'string' ? parseInt(profile.token_balance) : profile.token_balance;
+    
+    if (!profile || betAmount > currentBalance) {
       toast.error("Insufficient tokens!");
       return;
     }
@@ -64,7 +66,7 @@ const Game = () => {
     // Deduct bet amount
     const { error } = await supabase
       .from("profiles")
-      .update({ token_balance: profile.token_balance - betAmount })
+      .update({ token_balance: (currentBalance - betAmount).toString() })
       .eq("id", profile.id);
 
     if (error) {
@@ -98,10 +100,11 @@ const Game = () => {
   const cashOut = async () => {
     const multiplier = MULTIPLIERS[currentLane];
     const winnings = Math.floor(betAmount * multiplier);
+    const currentBalance = typeof profile.token_balance === 'string' ? parseInt(profile.token_balance) : profile.token_balance;
 
     const { error } = await supabase
       .from("profiles")
-      .update({ token_balance: profile.token_balance + winnings })
+      .update({ token_balance: (currentBalance + winnings).toString() })
       .eq("id", profile.id);
 
     if (!error) {
@@ -117,9 +120,9 @@ const Game = () => {
   const saveGameHistory = async (profit: number, multiplier: number) => {
     await supabase.from("game_history").insert({
       user_id: profile.id,
-      bet_amount: betAmount,
-      multiplier,
-      profit,
+      bet_amount: betAmount.toString(),
+      multiplier: multiplier.toString(),
+      profit: profit.toString(),
     });
   };
 

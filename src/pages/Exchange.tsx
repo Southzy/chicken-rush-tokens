@@ -60,13 +60,14 @@ const Exchange = () => {
     setProcessing(true);
 
     const tokensToGain = tokenAmount * EXCHANGE_RATES.jokeRuneToTokens;
-    const newTokenBalance = profile.token_balance + tokensToGain;
+    const currentBalance = typeof profile.token_balance === 'string' ? parseInt(profile.token_balance) : profile.token_balance;
+    const newTokenBalance = currentBalance + tokensToGain;
     const newJokeRunes = jokeRunes - tokenAmount;
 
     // Update profile tokens
     const { error: profileError } = await supabase
       .from("profiles")
-      .update({ token_balance: newTokenBalance })
+      .update({ token_balance: newTokenBalance.toString() })
       .eq("id", profile.id);
 
     if (profileError) {
@@ -78,7 +79,7 @@ const Exchange = () => {
     // Update inventory
     const { error: invError } = await supabase
       .from("user_inventory")
-      .update({ rune_joke: newJokeRunes })
+      .update({ rune_joke: newJokeRunes.toString() })
       .eq("user_id", profile.id);
 
     if (invError) {
@@ -104,7 +105,8 @@ const Exchange = () => {
     setProcessing(true);
 
     const shardsToGain = shardAmount * EXCHANGE_RATES.jokeRuneToShards;
-    const newShards = profile.rank_shards + shardsToGain;
+    const currentShards = typeof profile.rank_shards === 'string' ? parseInt(profile.rank_shards) : profile.rank_shards;
+    const newShards = currentShards + shardsToGain;
     const newJokeRunes = jokeRunes - shardAmount;
 
     // Update profile shards
@@ -122,7 +124,7 @@ const Exchange = () => {
     // Update inventory
     const { error: invError } = await supabase
       .from("user_inventory")
-      .update({ rune_joke: newJokeRunes })
+      .update({ rune_joke: newJokeRunes.toString() })
       .eq("user_id", profile.id);
 
     if (invError) {
@@ -169,7 +171,7 @@ const Exchange = () => {
     // Update inventory
     const { error: invError } = await supabase
       .from("user_inventory")
-      .update({ rune_joke: newJokeRunes })
+      .update({ rune_joke: newJokeRunes.toString() })
       .eq("user_id", profile.id);
 
     if (invError) {

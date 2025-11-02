@@ -47,7 +47,10 @@ const LootBox = () => {
   const openBox = async (box: any) => {
     if (!profile) return;
 
-    if (profile.token_balance < box.price) {
+    const currentBalance = typeof profile.token_balance === 'string' ? parseInt(profile.token_balance) : profile.token_balance;
+    const boxPrice = typeof box.price === 'string' ? parseInt(box.price) : box.price;
+
+    if (currentBalance < boxPrice) {
       toast.error("Not enough tokens!");
       return;
     }
@@ -57,7 +60,7 @@ const LootBox = () => {
     // Deduct tokens
     const { error: updateError } = await supabase
       .from("profiles")
-      .update({ token_balance: profile.token_balance - box.price })
+      .update({ token_balance: (currentBalance - boxPrice).toString() })
       .eq("id", profile.id);
 
     if (updateError) {

@@ -48,7 +48,10 @@ const Profile = () => {
     if (data) {
       setStats({
         totalGames: data.length,
-        totalWinnings: data.reduce((sum, game) => sum + game.profit, 0),
+        totalWinnings: data.reduce((sum, game) => {
+          const profit = typeof game.profit === 'string' ? parseInt(game.profit) : game.profit;
+          return sum + profit;
+        }, 0),
       });
     }
   };

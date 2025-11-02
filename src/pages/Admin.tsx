@@ -66,11 +66,12 @@ const Admin = () => {
     const user = users.find(u => u.id === selectedUser);
     if (!user) return;
 
-    const newBalance = Math.min(user.token_balance + tokenAmount, MAX_TOKEN_BALANCE);
+    const currentBalance = typeof user.token_balance === 'string' ? parseInt(user.token_balance) : user.token_balance;
+    const newBalance = Math.min(currentBalance + tokenAmount, MAX_TOKEN_BALANCE);
 
     const { error } = await supabase
       .from("profiles")
-      .update({ token_balance: newBalance })
+      .update({ token_balance: newBalance.toString() })
       .eq("id", selectedUser);
 
     if (error) {
@@ -92,7 +93,8 @@ const Admin = () => {
     const user = users.find(u => u.id === selectedUser);
     if (!user) return;
 
-    const newShards = Math.min(user.rank_shards + shardAmount, MAX_SHARD_BALANCE);
+    const currentShards = typeof user.rank_shards === 'string' ? parseInt(user.rank_shards) : user.rank_shards;
+    const newShards = Math.min(currentShards + shardAmount, MAX_SHARD_BALANCE);
 
     const { error } = await supabase
       .from("profiles")
